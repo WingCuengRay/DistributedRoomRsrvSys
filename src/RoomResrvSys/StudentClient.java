@@ -67,6 +67,7 @@ public class StudentClient extends Client {
 			String []timeSlots = {"7:30-9:30", "10:00-12:30", "13:30-16:00", "17:00-18:00", "19:00-20:00"};
 			Boolean isSuccess;
 			String response;
+			String availTimeSlots;
 			
 			student.Connect(args);
 			
@@ -86,6 +87,8 @@ public class StudentClient extends Client {
 				System.out.println("bookingID:" + response);
 				isSuccess = student.CancelBook(response);
 				System.out.println("Cancel Booking Result: " + isSuccess);
+				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				System.out.println(response + " " + availTimeSlots);
 				
 			}
 			System.out.print("\n\n");
@@ -96,14 +99,14 @@ public class StudentClient extends Client {
 				for(int i=1; i<=2; i++)
 				{
 					String bookingID = student.Book("DVL", date2, (short)201, timeSlots[i]);
-					String availTimeSlots = student.GetAvailableTimeSlot(date2);
+					availTimeSlots = student.GetAvailableTimeSlot(date2);
 					System.out.println(bookingID);
 					System.out.println(availTimeSlots);
 				}
 				
 				System.out.println("\n\n");
 				String bookingID = student.Book("KKL", date2, (short)201, "10:00-12:30");
-				String availTimeSlots = student.GetAvailableTimeSlot(date2);
+				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID + " " + availTimeSlots);
 				
 				
@@ -114,7 +117,7 @@ public class StudentClient extends Client {
 				boolean ret = student.CancelBook(bookingID);
 				System.out.println("Cancel booking: " + ret);
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
-				System.out.println(availTimeSlots);
+				System.out.println(availTimeSlots + "\n\n");
 				
 				bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[3]);
 				availTimeSlots = student.GetAvailableTimeSlot(date2);

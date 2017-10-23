@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -107,46 +108,114 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public String Book (String stu_id, String campus, String date, short room, String timeslots){
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-		String[] args = {stu_id, date, String.valueOf(room), timeslots};
+	public String Book (String stu_id, String campus, String date, short room, String timeslot){
+		String[] args = {stu_id, date, String.valueOf(room), timeslot};
 		LogItem log = new LogItem(RequestType.Book, args);
 		
-		// Invocate the methods in server
-		String bookingID = null;
-		try {
-			bookingID = roomRecorder.Book(stu_id, campus, dateFormat.parse(date), room, timeslots);
-			if(bookingID == null)
-			{
-				bookingID = "";
-				log.setResponse(bookingID);
-				log.setResult(false);
-			}
-			else {
-				log.setResponse(bookingID);
-				log.setResult(true);
-			}
-		} catch (ParseException e) {
-			e.printStackTrace();
+		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id);
+		if(bookingCnt >= 3)
+		{
+			log.setResponse(null);
+			log.setResult(false);
+			writer.write(log);
+			return "";
 		}
 		
 		
+		String request = "Book " + stu_id + " " + campus + " " + date + " " 
+				+ room + " " + timeslot;
+		
+		int targetPort = 0;
+		String targetIP = null;
+		if(campus.equals("DVL")) {
+			targetPort = 25560;
+			targetIP = "127.0.0.1";
+		}
+		else if(campus.equals("KKL")) {
+			targetPort = 25561;
+			targetIP = "127.0.0.1";
+		}
+		else if(campus.equals("WST")) {
+			targetPort = 25562;
+			targetIP = "127.0.0.1";
+		}
+		
+		DatagramSocket socket = null;
+		try {
+			socket = new DatagramSocket();
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return "";
+		}
+		boolean ret = SendUDPDatagram(socket, request, targetIP, targetPort);
+		if(ret == false)
+			return "";
+		String bookingID = this.ReceiveUDPDatagram(socket);
+		
+		if(bookingID.equals("")) {
+			log.setResponse(null);
+			log.setResult(false);
+		}
+		else {
+			roomRecorder.SetStuBookingCnt(stu_id, bookingCnt+1);
+			log.setResponse(bookingID);
+			log.setResult(true);
+		}
+		
 		writer.write(log);
-		return bookingID;		
+		return bookingID;
 	}
 	
 	@Override
-	public boolean CancelBook (String booking_id, String stu_id){
-		String[] args = {booking_id};
+	public boolean CancelBook (String bookingID, String stu_id){
+		String[] args = {bookingID};
 		LogItem log = new LogItem(RequestType.CancelBook, args);
 		
-		boolean ret = roomRecorder.CancelBook(booking_id, stu_id);
+		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id);
+		if(bookingCnt == 0)
+		{
+			log.setResponse(null);
+			log.setResult(false);
+			writer.write(log);
+			return false;
+		}
 		
-		log.setResult(ret);
+		String request = "CancelBook " + bookingID + " " + stu_id;
+		
+		int targetPort = 0;
+		String targetIP = null;
+		if(bookingID.contains("DVL")) {
+			targetPort = 25560;
+			targetIP = "127.0.0.1";
+		}
+		else if(bookingID.contains("KKL")) {
+			targetPort = 25561;
+			targetIP = "127.0.0.1";
+		}
+		else if(bookingID.contains("WST")) {
+			targetPort = 25562;
+			targetIP = "127.0.0.1";
+		}
+		
+		DatagramSocket socket = null;
+		try {
+			socket = new DatagramSocket();
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return false;
+		}
+		boolean ret = SendUDPDatagram(socket, request, targetIP, targetPort);
+		if(ret == false)
+			return false;
+		
+		String reply = this.ReceiveUDPDatagram(socket);
+		boolean isSuccess = Boolean.parseBoolean(reply);
+		if(isSuccess == true)
+			roomRecorder.SetStuBookingCnt(stu_id, bookingCnt-1);
+		
+		log.setResult(isSuccess);
 		writer.write(log);
-		
-		return ret;
-		
+		return isSuccess;		
 	}
 	
 	@Override
@@ -190,6 +259,19 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		return false;
 	}
 	
+	private boolean SendUDPDatagram(DatagramSocket socket, String message, String targetIP, int targetPort) {
+		try {
+			InetAddress inetAddr = InetAddress.getByName(targetIP);
+			DatagramPacket packet = new DatagramPacket(message.getBytes(), message.getBytes().length, inetAddr, targetPort);
+			socket.send(packet);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
 	
 	private String ReceiveUDPDatagram() {
 		byte[] buf = new byte[256];
@@ -203,6 +285,20 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		}
 		
 		return null;
+	}
+	
+	private String ReceiveUDPDatagram(DatagramSocket socket) {
+		byte[] buf = new byte[256];
+		DatagramPacket packet = new DatagramPacket(buf, buf.length);
+		String message = null;
+		try {
+			socket.receive(packet);
+			message = new String(packet.getData(), 0, packet.getLength());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return message;
 	}
 	
 	

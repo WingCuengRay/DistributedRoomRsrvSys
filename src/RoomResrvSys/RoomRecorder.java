@@ -135,7 +135,7 @@ public class RoomRecorder {
 					
 					String bookingID = Book(stu_id, targetCampus, date, room, timeslot);
 					if(bookingID == null)
-						bookingID = new String("null");
+						bookingID = new String("");
 					SendUDPDatagram(socket, bookingID, targetAddr, targetPort);
 				}
 			}
@@ -149,19 +149,10 @@ public class RoomRecorder {
 	public String Book(String stu_id, String targetCampus, Date date, int room, String time_slot){
 		String bookingID = null;
 		
-		if(stu_id.contains(campus)) {
-			// Check if the booking count of students was the maximum count.
-			Integer bookingCnt = stuBkngCntMap.get(stu_id);
-			if(bookingCnt!=null&&bookingCnt>=3)
-				return null;
-		}
-		
-		if(targetCampus.equals(campus)) {
-			// 瑕侀璁㈡埧闂寸殑璇锋眰宸茶鍙戦�佸埌瀵瑰簲鐨勬湇鍔″櫒澶勭悊
-			lock.writeLock().lock();
+		lock.writeLock().lock();
+		try {
 			Record record = getRecord(date, room, time_slot);
 			if(record == null || record.isOccupied()==true) { 
-				lock.writeLock().unlock();
 				return null;			
 			}
 			int randVal;
@@ -172,56 +163,12 @@ public class RoomRecorder {
 			
 			record.SetBookerID(stu_id);
 			record.setOccupied(true);
-			if(stu_id.contains(campus)) {
-				// Increase the booking count of students if the operation was ran on local server
-				Integer bookingCnt = stuBkngCntMap.get(stu_id);
-				if(bookingCnt == null)
-					stuBkngCntMap.put(stu_id, 1);
-				else if(bookingCnt < 3)
-					stuBkngCntMap.put(stu_id, bookingCnt+1);
-			}
-			lock.writeLock().unlock();
-			
-			return bookingID;
 		}
-		else {
-			// 鑻ヤ笉鍦ㄥ悓涓�涓牎鍖猴紝鍒欓�氳繃 UDP 鍚戣繙绋嬫湇鍔″櫒鍙戦�侀璁㈣姹傘��
-			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-			String request = "Book " + stu_id + " " + targetCampus + " " + dateFormat.format(date) + " "
-					+ room + " " + time_slot;
-			if(targetCampus.equals("DVL"))
-				port = 25560;
-			else if(targetCampus.equals("KKL"))
-				port = 25561;
-			else if(targetCampus.equals("WST"))
-				port = 25562;
-			else
-				return null;
-			
-			InetAddress targetIP;
-			DatagramSocket socket;
-			try {
-				targetIP = InetAddress.getByName("127.0.0.1");
-				socket = new DatagramSocket();
-				this.SendUDPDatagram(socket, request, targetIP, port);
-				bookingID = this.ReceiveUDPDatagram(socket);
-				if(bookingID==null || bookingID.equals("null"))
-					return null;
-			} catch (UnknownHostException | SocketException e) {
-				e.printStackTrace();
-				return null;
-			}
-			
-			lock.writeLock().lock();
-			Integer bookingCnt = stuBkngCntMap.get(stu_id);
-			if(bookingCnt == null)
-				stuBkngCntMap.put(stu_id, 1);
-			else if(bookingCnt < 3)
-				stuBkngCntMap.put(stu_id, bookingCnt+1);
+		finally {
 			lock.writeLock().unlock();
-			
-			return bookingID;
 		}
+		
+		return bookingID;
 	}
 	
 	//@return: If cancel successfully, return true. Otherwise false 
@@ -229,67 +176,19 @@ public class RoomRecorder {
 		if(bookingID == null)
 			return false;
 		
-		if(bookingID.contains(campus)) {
-			// Cancel booking on local server		
-			lock.writeLock().lock();
-			try {
-				Record record = bookingIDMap.get(bookingID);
-				if(record == null || record.isOccupied()==false || !record.getBookerID().equals(stu_id))
-					return false;
-				
-				if(stu_id.contains(campus)) {
-					// 濡傛灉褰撳墠鐢ㄦ埛鍦ㄦ湰鍦版湇鍔″櫒涓婅繘琛屼簡鍙栨秷鎿嶄綔锛屽垯鍙互鐩存帴瀵规湰鍦拌〃杩涜鎿嶄綔
-					Integer bookingCnt = stuBkngCntMap.get(record.getBookerID());
-					if(bookingCnt==null || bookingCnt==0)
-						return false;
-					stuBkngCntMap.put(record.getBookerID(), bookingCnt-1);
-				}
-				
-				bookingIDMap.remove(bookingID);
-				record.SetBookerID(null);
-				record.setOccupied(false);
-			}finally {
-				lock.writeLock().unlock();
-			}
-			
-			return true;
-		}
-		else {
-			// Cancel booking through UDP remote connection
-			int targetPort = 0;
-			if(bookingID.contains("DVL")) 
-				targetPort = 25560;
-			else if(bookingID.contains("KKL"))
-				targetPort = 25561;
-			else if(bookingID.contains("WST"))
-				targetPort = 25562;
-			String message = "CancelBook " + bookingID + " " + stu_id;
-			
-			InetAddress targetIP = null;;
-			DatagramSocket socket;
-			try {
-				targetIP = InetAddress.getByName("127.0.0.1");
-				socket = new DatagramSocket();
-			} catch (UnknownHostException | SocketException e) {
-				e.printStackTrace();
+		lock.writeLock().lock();
+		try {
+			Record record = bookingIDMap.get(bookingID);
+			if(record == null || record.isOccupied()==false || !record.getBookerID().equals(stu_id))
 				return false;
-			}
-			this.SendUDPDatagram(socket, message, targetIP, targetPort);
-			String returnVal = this.ReceiveUDPDatagram(socket);
-			if(returnVal==null || returnVal.equals("false"))
-				return false;
-			else {
-				// 鍑忓皬鐢ㄦ埛鐨勬�婚璁㈡鏁� - booking cnt
-				lock.writeLock().lock();
-				Integer bookingCnt = stuBkngCntMap.get(stu_id);
-				if(bookingCnt==null || bookingCnt==0)
-					return false;
-				stuBkngCntMap.put(stu_id, bookingCnt-1);
-				lock.writeLock().unlock();
-				
-				return true;
-			}	
+			bookingIDMap.remove(bookingID);
+			record.SetBookerID(null);
+			record.setOccupied(false);
 		}
+		finally {
+			lock.writeLock().unlock();
+		}
+		return true;
 	}
 	
 	
@@ -382,6 +281,17 @@ public class RoomRecorder {
 		
 		return cnt;
 	}
+	
+	public int GetStuBookingCnt(String stu_id) {
+		Integer cnt = stuBkngCntMap.get(stu_id);
+		if(cnt == null)
+			return 0;
+		return cnt;
+	}
+	
+	public void SetStuBookingCnt(String stu_id, int cnt) {
+		stuBkngCntMap.put(stu_id, cnt);
+	}
 
 	
 	private synchronized static void IncrementRecordID(){
@@ -442,20 +352,6 @@ public class RoomRecorder {
 		}
 		
 		return true;
-	}
-	
-	private String ReceiveUDPDatagram(DatagramSocket socket) {
-		byte[] buf = new byte[256];
-		DatagramPacket packet = new DatagramPacket(buf, buf.length);
-		String message = null;
-		try {
-			socket.receive(packet);
-			message = new String(packet.getData(), 0, packet.getLength());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return message;
 	}
 	
 	
