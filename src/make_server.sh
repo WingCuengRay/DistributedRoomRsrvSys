@@ -1,5 +1,6 @@
 #/bin/bash
 
+./killBg.sh Server
 idlj -td ./ -fall ./ServerRemote.idl
 javac -g -cp . ./RemoteInterface/*.java -d ../bin/
 javac -g -cp . ./RoomResrvSys/*.java -d ../bin/

@@ -55,6 +55,27 @@ public class StudentClient extends Client {
 		return ret;
 	}
 	
+	@Override
+	public String ChangeReservation(String bookingID, String new_campus_name, 
+			String new_room_no, String new_timeslot) {
+		String new_bookingID = service.ChangeReservation(user_id, bookingID, new_campus_name, new_room_no, new_timeslot);
+		
+		String[] args = {bookingID, new_campus_name, new_room_no, new_timeslot};
+		LogItem log = new LogItem(RequestType.CancelBook, args);
+		if(new_bookingID.equals("")) {
+			log.setResult(false);
+			log.setResponse(null);
+			writer.write(log);
+			return null;
+		}
+		else {
+			log.setResult(true);
+			log.setResponse(new_bookingID);
+			writer.write(log);
+			return new_bookingID;
+		}
+	}
+	
 	
 	//--------------- Debug ------------------
 	private static void testStuFunction(String []args) {
@@ -96,7 +117,7 @@ public class StudentClient extends Client {
 			
 			// Test booking limitation
 			{
-				for(int i=1; i<=2; i++)
+				for(int i=0; i<2; i++)
 				{
 					String bookingID = student.Book("DVL", date2, (short)201, timeSlots[i]);
 					availTimeSlots = student.GetAvailableTimeSlot(date2);
@@ -105,24 +126,30 @@ public class StudentClient extends Client {
 				}
 				
 				System.out.println("\n\n");
-				String bookingID = student.Book("KKL", date2, (short)201, "10:00-12:30");
+				String bookingID = student.Book("KKL", date2, (short)201, timeSlots[1]);
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID + " " + availTimeSlots);
 				
 				
-				String bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[3]);
+				String bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[2]);		//Should fail
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
-				
-				boolean ret = student.CancelBook(bookingID);
+					
+				boolean ret = student.CancelBook(bookingID);			// Should success
 				System.out.println("Cancel booking: " + ret);
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(availTimeSlots + "\n\n");
 				
-				bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[3]);
+				bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[2]);		// Should success
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
-			}			
+			
+				// Test changeReservation
+				String new_bookingID = student.ChangeReservation(bookingID2, "KKL", String.valueOf(201), timeSlots[3]);
+				System.out.println("ChangeReservation: " + new_bookingID);
+				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				System.out.println(availTimeSlots + "\n\n");
+			}
 			
 		}catch(Exception e) {
 			e.printStackTrace();

@@ -2,7 +2,6 @@ package RoomResrvSys;
 
 import java.util.HashMap;
 import java.util.Random;
-import java.util.TimerTask;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Date;
@@ -24,7 +23,7 @@ public class RoomRecorder {
 	private String campus;
 	private HashMap<Date, HashMap<Integer, ArrayList<Record>>> recordDateMap;
 	private HashMap<String, Record> bookingIDMap;
-	private HashMap<String, Integer> stuBkngCntMap;		//TODO: implement booking times limitation every week
+	private ArrayList<HashMap<String, Integer>> stuBkngCntMap;  	
 	private Thread thread;
 	private int port;
 	private ReadWriteLock lock;
@@ -37,7 +36,9 @@ public class RoomRecorder {
 	public RoomRecorder(String camp, int listenPort){
 		recordDateMap = new HashMap<Date, HashMap<Integer, ArrayList<Record>>>();
 		bookingIDMap = new HashMap<String, Record>();
-		stuBkngCntMap = new HashMap<String, Integer>();
+		stuBkngCntMap = new ArrayList<HashMap<String, Integer>>(55);
+		for(int i=0; i<55; i++)
+			stuBkngCntMap.add(new HashMap<String, Integer>());
 		campus = camp;
 		port = listenPort;
 		lock = new ReentrantReadWriteLock();
@@ -85,11 +86,11 @@ public class RoomRecorder {
 				InetAddress targetAddr = packet.getAddress();
 				int targetPort = packet.getPort();
 				DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-				Date date = null;
 				
 				String receive = new String(packet.getData(), 0, packet.getLength());
 				String[] parts = receive.split(" ");
-				if(parts.length==2 && parts[0].equals("GetAvailTimeSlot")) {					
+				if(parts.length==2 && parts[0].equals("GetAvailTimeSlot")) {	
+					Date date = null;
 					int cnt = 0;
 					try {
 						date = dateFormat.parse(parts[1]);
@@ -102,23 +103,76 @@ public class RoomRecorder {
 					String sent = new String(campus+": " + cnt+"; ");
 					SendUDPDatagram(socket, sent, targetAddr, targetPort);
 				}
+				else if(parts.length==2 && parts[0].equals("GetBookingDate")) {
+					String bookingID = parts[1];
+					Record record = bookingIDMap.get(bookingID);
+					String reply;
+					if(record != null) {
+						Date date = record.getDate();
+						SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+						reply = df.format(date); 
+					}
+					else
+						reply = "";
+					SendUDPDatagram(socket, reply, targetAddr, targetPort);
+				}
+				// params: CanCancel bookingID  stu_id
+				else if(parts.length==3 && parts[0].equals("CanCancel")) {
+					String bookingID = parts[1];
+					String stu_id = parts[2];
+					Record record = bookingIDMap.get(bookingID);
+					
+					String reply;
+					if(record==null || !stu_id.equals(record.getBookerID()))
+						reply = "false";
+					else
+						reply = "true";
+							
+					SendUDPDatagram(socket, reply, targetAddr, targetPort);
+				}
+				// params: CanBook room_no date timeslot
+				else if(parts.length==4 && parts[0].equals("CanBook")) {
+					int room_no = Integer.parseInt(parts[1]);
+					Date date = null;
+					try {
+						SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+						date = df.parse(parts[2]);
+					} catch (ParseException e) {
+						e.printStackTrace();
+						continue;
+					}
+					String timeslot = parts[3];
+					
+					 boolean ret = isTimeslotAvailable(date, room_no, timeslot);
+					 SendUDPDatagram(socket, String.valueOf(ret), targetAddr, targetPort);
+				}
 				// params: DecreaseStuCounting DVL10000
-				else if(parts.length==2 && parts[0].equals("DecreaseStuCounting")) {
+				else if(parts.length==3 && parts[0].equals("DecreaseStuCounting")) {
 					String stu_id = parts[1];
+					String s_date = parts[2];
+					Date date = null;
+					try {
+						date = dateFormat.parse(s_date);
+					} catch (ParseException e) {
+						e.printStackTrace();
+						continue;
+					}
 					
 					lock.writeLock().lock();
-					Integer cnt = stuBkngCntMap.get(stu_id);
-					if(cnt!=null && cnt>0)
-						stuBkngCntMap.put(stu_id, cnt-1);
+					int cnt = GetStuBookingCnt(stu_id, s_date);
+					SetStuBookingCnt(stu_id, s_date, cnt-1);
 					lock.writeLock().unlock();
 				}
 				// params: CancelBook DVL123481759134 DVL10000
 				else if(parts.length==3 && parts[0].equals("CancelBook")) {
 					String bookingID = parts[1];
 					String stu_id = parts[2];
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 					
+					Record record = bookingIDMap.get(bookingID);
 					boolean ret = CancelBook(bookingID, stu_id);
 					String message = String.valueOf(ret);
+					
 					SendUDPDatagram(socket, message, targetAddr, targetPort);
 				}
 				//params: Book DVL10000 DVL 2017-9-18 201 7:30-9:30
@@ -127,6 +181,8 @@ public class RoomRecorder {
 					String targetCampus = parts[2];
 					int room = Integer.parseInt(parts[4]);
 					String timeslot = parts[5];
+					Date date = null;
+					
 					try {
 						date = dateFormat.parse(parts[3]);
 					} catch (ParseException e) {
@@ -211,7 +267,7 @@ public class RoomRecorder {
 			submap.put(room, new ArrayList<Record>());
 			records = submap.get(room);
 		}
-		Record record = new Record(timeSlot, record_id);
+		Record record = new Record(timeSlot, record_id, date);
 		IncrementRecordID();
 		records.add(record);
 		lock.writeLock().unlock();
@@ -243,8 +299,9 @@ public class RoomRecorder {
 					
 					DatagramSocket socket;
 					try {
+						SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 						socket = new DatagramSocket();
-						String message = "DecreaseStuCounting " + bookerID; 
+						String message = "DecreaseStuCounting " + bookerID + " " + df.format(del.getDate()); 
 						SendUDPDatagram(socket, message, InetAddress.getByName("127.0.0.1"), port);
 					} catch (SocketException | UnknownHostException e) {
 						e.printStackTrace();
@@ -282,15 +339,45 @@ public class RoomRecorder {
 		return cnt;
 	}
 	
-	public int GetStuBookingCnt(String stu_id) {
-		Integer cnt = stuBkngCntMap.get(stu_id);
+
+	public int GetStuBookingCnt(String stu_id, String s_date) {
+		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		Date date;
+		try {
+			date = df.parse(s_date);
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return 0;
+		}
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		int week = cal.get(Calendar.WEEK_OF_YEAR);
+		
+		HashMap<String, Integer> stuMap = stuBkngCntMap.get(week);
+		Integer cnt = stuMap.get(stu_id);
 		if(cnt == null)
 			return 0;
-		return cnt;
+		else
+			return cnt;
 	}
 	
-	public void SetStuBookingCnt(String stu_id, int cnt) {
-		stuBkngCntMap.put(stu_id, cnt);
+	public void SetStuBookingCnt(String stu_id, String s_date, int cnt) {
+		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		Date date;
+		try {
+			date = df.parse(s_date);
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return;
+		}
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		int week = cal.get(Calendar.WEEK_OF_YEAR);
+		
+		HashMap<String, Integer> stuMap = stuBkngCntMap.get(week);
+		stuMap.put(stu_id, cnt);
+		
+		return;
 	}
 
 	
@@ -342,6 +429,25 @@ public class RoomRecorder {
 		return null;
 	}
 	
+	private boolean isTimeslotAvailable(Date date, int room_no, String timeslot) {
+		HashMap<Integer, ArrayList<Record>> roomMap = recordDateMap.get(date);
+		if(roomMap == null)
+			return false;
+		
+		ArrayList<Record> records = roomMap.get(room_no);
+		if(records == null)
+			return false;
+		
+		for(Record item:records) {
+			if(timeslot.equals(item.getTimeSlot())) {
+				if(!item.isOccupied())
+					return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	private boolean SendUDPDatagram(DatagramSocket socket, String message, InetAddress targetIP, int port) {
 		DatagramPacket packet = new DatagramPacket(message.getBytes(), message.getBytes().length, targetIP, port);
 		try {
@@ -353,7 +459,6 @@ public class RoomRecorder {
 		
 		return true;
 	}
-	
 	
 	public void PrintMap(){
 		for(Date item : recordDateMap.keySet()){

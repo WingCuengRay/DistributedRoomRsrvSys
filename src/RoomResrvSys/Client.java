@@ -135,6 +135,10 @@ public class Client {
 	public boolean CancelBook(String bookingID) throws RemoteException {
 		return false;
 	}
+
+	public String ChangeReservation(String bookingID, String new_campus_name, String new_room_no, String new_timeslot) {
+		return null;
+	}
 	
 	
 	

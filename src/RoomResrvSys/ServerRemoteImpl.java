@@ -5,26 +5,19 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.rmi.RemoteException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 
-import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA_2_3.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
-import org.omg.CosNaming.NamingContextPackage.CannotProceed;
-import org.omg.CosNaming.NamingContextPackage.NotFound;
 import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
-import org.omg.PortableServer.POAPackage.ServantNotActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-
 import RemoteInterface.ServerRemote;
 import RemoteInterface.ServerRemoteHelper;
 import RemoteInterface.ServerRemotePOA;
@@ -34,6 +27,20 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	private String campus;
 	private LogWriter writer;
 	private DatagramSocket socket;
+	private static HashMap<String, String> hostIPMap;
+	private static HashMap<String, Integer> hostPortMap;
+	
+	static{
+		hostIPMap = new HashMap<String, String>();
+		hostIPMap.put("DVL", "127.0.0.1");
+		hostIPMap.put("KKL", "127.0.0.1");
+		hostIPMap.put("WST", "127.0.0.1");
+		
+		hostPortMap = new HashMap<String, Integer>();
+		hostPortMap.put("DVL", 25560);
+		hostPortMap.put("KKL", 25561);
+		hostPortMap.put("WST", 25562);
+	}
 	
 	
 	protected ServerRemoteImpl(String campus_name, int listenPort) throws SocketException {
@@ -112,7 +119,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		String[] args = {stu_id, date, String.valueOf(room), timeslot};
 		LogItem log = new LogItem(RequestType.Book, args);
 		
-		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id);
+		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id, date);
 		if(bookingCnt >= 3)
 		{
 			log.setResponse(null);
@@ -157,7 +164,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 			log.setResult(false);
 		}
 		else {
-			roomRecorder.SetStuBookingCnt(stu_id, bookingCnt+1);
+			roomRecorder.SetStuBookingCnt(stu_id, date, bookingCnt+1);
 			log.setResponse(bookingID);
 			log.setResult(true);
 		}
@@ -171,17 +178,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		String[] args = {bookingID};
 		LogItem log = new LogItem(RequestType.CancelBook, args);
 		
-		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id);
-		if(bookingCnt == 0)
-		{
-			log.setResponse(null);
-			log.setResult(false);
-			writer.write(log);
-			return false;
-		}
-		
-		String request = "CancelBook " + bookingID + " " + stu_id;
-		
+		// Initialize socket information
 		int targetPort = 0;
 		String targetIP = null;
 		if(bookingID.contains("DVL")) {
@@ -204,6 +201,24 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 			e.printStackTrace();
 			return false;
 		}
+		
+		// Get the date of booking record
+		String request = "GetBookingDate " + bookingID;
+		SendUDPDatagram(socket, request, targetIP, targetPort);
+		String date = ReceiveUDPDatagram(socket);
+		if(date.equals(""))
+			return false;
+		
+		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id, date);
+		if(bookingCnt == 0)
+		{
+			log.setResponse(null);
+			log.setResult(false);
+			writer.write(log);
+			return false;
+		}
+		
+		request = "CancelBook " + bookingID + " " + stu_id;
 		boolean ret = SendUDPDatagram(socket, request, targetIP, targetPort);
 		if(ret == false)
 			return false;
@@ -211,7 +226,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		String reply = this.ReceiveUDPDatagram(socket);
 		boolean isSuccess = Boolean.parseBoolean(reply);
 		if(isSuccess == true)
-			roomRecorder.SetStuBookingCnt(stu_id, bookingCnt-1);
+			roomRecorder.SetStuBookingCnt(stu_id, date, bookingCnt-1);
 		
 		log.setResult(isSuccess);
 		writer.write(log);
@@ -235,14 +250,6 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		writer.write(log);
 		
 		return s1+s2+s3;		
-	}
-	
-	
-	@Override
-	public boolean ChangeReservation (String booking_id, String new_campus_name, String new_room_no, String new_timeslot){
-		//TODO
-		
-		return false;
 	}
 
 	
@@ -337,4 +344,88 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		
 		System.out.println("Helllo World");
 	}
+
+	@Override
+	public String ChangeReservation(String stu_id, String bookingID, 
+			String new_campus_name, String new_room_no, String new_timeslot) {
+		// TODO Auto-generated method stub
+		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
+		LogItem log = new LogItem(RequestType.CancelBook, args);
+		
+		String targetIP = null;
+		int targetPort = 0;
+		
+		if(bookingID.contains("DVL")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25560;
+		}
+		else if(bookingID.contains("KKL")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25561;
+		}
+		else if(bookingID.contains("WST")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25562;
+		}
+		
+		String request;
+		String reply;
+		String new_bookingID;
+		try {
+			DatagramSocket socket = new DatagramSocket();
+			request = "GetBookingDate " + bookingID;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			String date = this.ReceiveUDPDatagram(socket);
+			if(date.equals(""))
+				throw new Exception("Can not get booking date");
+			
+			//Format: CanCancel bookingID stu_id
+			request = "CanCancel " + bookingID + " " + stu_id;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			reply = this.ReceiveUDPDatagram(socket);
+			boolean canCancel = Boolean.parseBoolean(reply);
+			
+			//Format: CanBook room_no date timeslot
+			request = "CanBook " + new_room_no + " " + date + " " + new_timeslot;
+			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
+			reply = this.ReceiveUDPDatagram(socket);
+			boolean canBook = Boolean.parseBoolean(reply);
+			if(!canCancel || !canBook) 
+				throw new Exception("Conditions of changeReservation not satisified");	
+			
+			request = "Book " + stu_id + " " + new_campus_name  + " " + date 
+					+ " " + new_room_no + " " + new_timeslot;
+			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
+			new_bookingID = this.ReceiveUDPDatagram(socket);
+			if(new_bookingID.equals("")) 
+				throw new Exception("Booking failure");
+			
+			request = "CancelBook " + bookingID + " " + stu_id;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			reply = this.ReceiveUDPDatagram(socket);
+			if(Boolean.parseBoolean(reply) == false)
+			{
+				request = "CancelBook " + new_bookingID + " " + stu_id;
+				SendUDPDatagram(socket, request, targetIP, targetPort);
+				reply = ReceiveUDPDatagram(socket);
+				throw new Exception("Cannot cancel old booking");
+			}
+			
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return "";
+		} catch (Exception e) {
+			log.setResult(false);
+			log.setResponse(null);
+			return "";
+		} finally {
+			writer.write(log);
+		}
+		
+		log.setResult(true);
+		log.setResponse(new_bookingID);
+		
+		return new_bookingID;
+	}
+
 }
