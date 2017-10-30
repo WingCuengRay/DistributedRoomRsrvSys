@@ -48,9 +48,9 @@ public class AdminClient extends Client {
 			writer.write(log);
 		}
 		
-		ArrayList<Boolean> ret = new ArrayList<Boolean>(result.length);
+		ArrayList<Boolean> ret = new ArrayList<Boolean>();
 		for(int i=0; i<result.length; i++)
-			ret.set(i, result[i]);
+			ret.add(result[i]);
 		return ret;
 	}
 	

@@ -251,6 +251,89 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		
 		return s1+s2+s3;		
 	}
+	
+	@Override
+	public String ChangeReservation(String stu_id, String bookingID, 
+			String new_campus_name, String new_room_no, String new_timeslot) {
+		// TODO Auto-generated method stub
+		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
+		LogItem log = new LogItem(RequestType.CancelBook, args);
+		
+		String targetIP = null;
+		int targetPort = 0;
+		
+		if(bookingID.contains("DVL")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25560;
+		}
+		else if(bookingID.contains("KKL")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25561;
+		}
+		else if(bookingID.contains("WST")) {
+			targetIP = "127.0.0.1";
+			targetPort = 25562;
+		}
+		
+		String request;
+		String reply;
+		String new_bookingID;
+		try {
+			DatagramSocket socket = new DatagramSocket();
+			request = "GetBookingDate " + bookingID;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			String date = this.ReceiveUDPDatagram(socket);
+			if(date.equals(""))
+				throw new Exception("Can not get booking date");
+			
+			//Format: CanCancel bookingID stu_id
+			request = "CanCancel " + bookingID + " " + stu_id;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			reply = this.ReceiveUDPDatagram(socket);
+			boolean canCancel = Boolean.parseBoolean(reply);
+			
+			//Format: CanBook room_no date timeslot
+			request = "CanBook " + new_room_no + " " + date + " " + new_timeslot;
+			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
+			reply = this.ReceiveUDPDatagram(socket);
+			boolean canBook = Boolean.parseBoolean(reply);
+			if(!canCancel || !canBook) 
+				throw new Exception("Conditions of changeReservation not satisified");	
+			
+			request = "Book " + stu_id + " " + new_campus_name  + " " + date 
+					+ " " + new_room_no + " " + new_timeslot;
+			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
+			new_bookingID = this.ReceiveUDPDatagram(socket);
+			if(new_bookingID.equals("")) 
+				throw new Exception("Booking failure");
+			
+			request = "CancelBook " + bookingID + " " + stu_id;
+			SendUDPDatagram(socket, request, targetIP, targetPort);
+			reply = this.ReceiveUDPDatagram(socket);
+			if(Boolean.parseBoolean(reply) == false)
+			{
+				request = "CancelBook " + new_bookingID + " " + stu_id;
+				SendUDPDatagram(socket, request, targetIP, targetPort);
+				reply = ReceiveUDPDatagram(socket);
+				throw new Exception("Cannot cancel old booking");
+			}
+			
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return "";
+		} catch (Exception e) {
+			log.setResult(false);
+			log.setResponse(null);
+			return "";
+		} finally {
+			writer.write(log);
+		}
+		
+		log.setResult(true);
+		log.setResponse(new_bookingID);
+		
+		return new_bookingID;
+	}
 
 	
 	private boolean SendUDPDatagram(String targetAddr, int targetPort, String message) {
@@ -345,87 +428,6 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		System.out.println("Helllo World");
 	}
 
-	@Override
-	public String ChangeReservation(String stu_id, String bookingID, 
-			String new_campus_name, String new_room_no, String new_timeslot) {
-		// TODO Auto-generated method stub
-		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
-		LogItem log = new LogItem(RequestType.CancelBook, args);
-		
-		String targetIP = null;
-		int targetPort = 0;
-		
-		if(bookingID.contains("DVL")) {
-			targetIP = "127.0.0.1";
-			targetPort = 25560;
-		}
-		else if(bookingID.contains("KKL")) {
-			targetIP = "127.0.0.1";
-			targetPort = 25561;
-		}
-		else if(bookingID.contains("WST")) {
-			targetIP = "127.0.0.1";
-			targetPort = 25562;
-		}
-		
-		String request;
-		String reply;
-		String new_bookingID;
-		try {
-			DatagramSocket socket = new DatagramSocket();
-			request = "GetBookingDate " + bookingID;
-			SendUDPDatagram(socket, request, targetIP, targetPort);
-			String date = this.ReceiveUDPDatagram(socket);
-			if(date.equals(""))
-				throw new Exception("Can not get booking date");
-			
-			//Format: CanCancel bookingID stu_id
-			request = "CanCancel " + bookingID + " " + stu_id;
-			SendUDPDatagram(socket, request, targetIP, targetPort);
-			reply = this.ReceiveUDPDatagram(socket);
-			boolean canCancel = Boolean.parseBoolean(reply);
-			
-			//Format: CanBook room_no date timeslot
-			request = "CanBook " + new_room_no + " " + date + " " + new_timeslot;
-			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
-			reply = this.ReceiveUDPDatagram(socket);
-			boolean canBook = Boolean.parseBoolean(reply);
-			if(!canCancel || !canBook) 
-				throw new Exception("Conditions of changeReservation not satisified");	
-			
-			request = "Book " + stu_id + " " + new_campus_name  + " " + date 
-					+ " " + new_room_no + " " + new_timeslot;
-			SendUDPDatagram(socket, request, hostIPMap.get(new_campus_name), hostPortMap.get(new_campus_name));
-			new_bookingID = this.ReceiveUDPDatagram(socket);
-			if(new_bookingID.equals("")) 
-				throw new Exception("Booking failure");
-			
-			request = "CancelBook " + bookingID + " " + stu_id;
-			SendUDPDatagram(socket, request, targetIP, targetPort);
-			reply = this.ReceiveUDPDatagram(socket);
-			if(Boolean.parseBoolean(reply) == false)
-			{
-				request = "CancelBook " + new_bookingID + " " + stu_id;
-				SendUDPDatagram(socket, request, targetIP, targetPort);
-				reply = ReceiveUDPDatagram(socket);
-				throw new Exception("Cannot cancel old booking");
-			}
-			
-		} catch (SocketException e) {
-			e.printStackTrace();
-			return "";
-		} catch (Exception e) {
-			log.setResult(false);
-			log.setResponse(null);
-			return "";
-		} finally {
-			writer.write(log);
-		}
-		
-		log.setResult(true);
-		log.setResponse(new_bookingID);
-		
-		return new_bookingID;
-	}
+
 
 }
