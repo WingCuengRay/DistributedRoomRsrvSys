@@ -142,8 +142,12 @@ public class TestClass {
 		Client student_2 = ClientFactory.createClient("DVLS1100");
 		student_2.Login("DVLS1100", "");
 		student_2.Connect(args);
-		student_2.CancelBook(bookingId);
+		boolean ret = student_2.CancelBook(bookingId);
 		String cnt = student_2.GetAvailableTimeSlot(date2);
+		if(ret == false) 
+			System.out.println(student_2.user_id + "CancelBooking fails.");
+		else
+			System.out.println(student_2.user_id + "CancelBooking success.");
 		System.out.println("Available time slots on " + date2+ ": " + cnt);
 		System.out.print("\n\n");
 	}
@@ -155,7 +159,7 @@ public class TestClass {
 		student.Login("DVLS1000", "");
 		student.Connect(args);
 		String bookingID = BookAndPrint(student, "WST", date2, 201, timeSlots[1]);	
-		bookingID = student.ChangeReservation(bookingID, "DVL", String.valueOf(201), timeSlots[0]);
+		bookingID = student.ChangeReservation(bookingID, "KKL", String.valueOf(201), timeSlots[0]);
 		if(bookingID == null) {
 			System.out.println("Failed to change.");
 		}

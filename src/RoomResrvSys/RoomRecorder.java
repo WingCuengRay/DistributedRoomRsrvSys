@@ -60,7 +60,137 @@ public class RoomRecorder {
 		thread.start();
 	}
 	
-	public class UDPReceiver implements Runnable {
+	private class UDPWorker extends Thread{
+		DatagramPacket packet;
+		
+		UDPWorker(DatagramPacket arg){
+			packet = arg;
+		}
+		
+		@SuppressWarnings({ "resource", "unused" })
+		@Override
+		public void run() {
+			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			InetAddress targetAddr = packet.getAddress();
+			int targetPort = packet.getPort();
+			DatagramSocket socket;
+			try {
+				socket = new DatagramSocket();
+			} catch (SocketException e1) {
+				e1.printStackTrace();
+				return;
+			}
+			
+			String receive = new String(packet.getData(), 0, packet.getLength());
+			String[] parts = receive.split(" ");
+			if(parts.length==2 && parts[0].equals("GetAvailTimeSlot")) {	
+				Date date = null;
+				int cnt = 0;
+				try {
+					date = dateFormat.parse(parts[1]);
+				} catch (ParseException e) {
+					e.printStackTrace();
+					return;
+				}
+				
+				cnt = GetAvailableTimeSlot(date);
+				String sent = new String(campus+": " + cnt+"; ");
+				SendUDPDatagram(socket, sent, targetAddr, targetPort);
+			}
+			else if(parts.length==2 && parts[0].equals("GetBookingDate")) {
+				String bookingID = parts[1];
+				Record record = bookingIDMap.get(bookingID);
+				String reply;
+				if(record != null) {
+					Date date = record.getDate();
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+					reply = df.format(date); 
+				}
+				else
+					reply = "";
+				SendUDPDatagram(socket, reply, targetAddr, targetPort);
+			}
+			// params: CanCancel bookingID  stu_id
+			else if(parts.length==3 && parts[0].equals("CanCancel")) {
+				String bookingID = parts[1];
+				String stu_id = parts[2];
+				Record record = bookingIDMap.get(bookingID);
+				
+				String reply;
+				if(record==null || !stu_id.equals(record.getBookerID()))
+					reply = "false";
+				else
+					reply = "true";
+						
+				SendUDPDatagram(socket, reply, targetAddr, targetPort);
+			}
+			// params: CanBook room_no date timeslot
+			else if(parts.length==4 && parts[0].equals("CanBook")) {
+				int room_no = Integer.parseInt(parts[1]);
+				Date date = null;
+				try {
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+					date = df.parse(parts[2]);
+				} catch (ParseException e) {
+					e.printStackTrace();
+					return;
+				}
+				String timeslot = parts[3];
+				
+				 boolean ret = isTimeslotAvailable(date, room_no, timeslot);
+				 SendUDPDatagram(socket, String.valueOf(ret), targetAddr, targetPort);
+			}
+			// params: DecreaseStuCounting DVL10000
+			else if(parts.length==3 && parts[0].equals("DecreaseStuCounting")) {
+				String stu_id = parts[1];
+				String s_date = parts[2];
+				Date date = null;
+				try {
+					date = dateFormat.parse(s_date);
+				} catch (ParseException e) {
+					e.printStackTrace();
+					return;
+				}
+				
+				lock.writeLock().lock();
+				int cnt = GetStuBookingCnt(stu_id, s_date);
+				SetStuBookingCnt(stu_id, s_date, cnt-1);
+				lock.writeLock().unlock();
+			}
+			// params: CancelBook DVL123481759134 DVL10000
+			else if(parts.length==3 && parts[0].equals("CancelBook")) {
+				String bookingID = parts[1];
+				String stu_id = parts[2];
+				
+				boolean ret = CancelBook(bookingID, stu_id);
+				String message = String.valueOf(ret);
+				
+				SendUDPDatagram(socket, message, targetAddr, targetPort);
+			}
+			//params: Book DVL10000 DVL 2017-9-18 201 7:30-9:30
+			else if(parts.length==6 && parts[0].equals("Book")) {
+				String stu_id = parts[1];
+				String targetCampus = parts[2];
+				int room = Integer.parseInt(parts[4]);
+				String timeslot = parts[5];
+				Date date = null;
+				
+				try {
+					date = dateFormat.parse(parts[3]);
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
+				
+				String bookingID = Book(stu_id, targetCampus, date, room, timeslot);
+				if(bookingID == null)
+					bookingID = new String("");
+				SendUDPDatagram(socket, bookingID, targetAddr, targetPort);
+			}
+		}
+	}
+	
+	private class UDPReceiver implements Runnable {
+		@SuppressWarnings("resource")
 		@Override
 		public void run() {
 			byte []buf = new byte[256];
@@ -83,117 +213,8 @@ public class RoomRecorder {
 					continue;
 				}
 				
-				InetAddress targetAddr = packet.getAddress();
-				int targetPort = packet.getPort();
-				DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-				
-				String receive = new String(packet.getData(), 0, packet.getLength());
-				String[] parts = receive.split(" ");
-				if(parts.length==2 && parts[0].equals("GetAvailTimeSlot")) {	
-					Date date = null;
-					int cnt = 0;
-					try {
-						date = dateFormat.parse(parts[1]);
-					} catch (ParseException e) {
-						e.printStackTrace();
-						continue;
-					}
-					
-					cnt = GetAvailableTimeSlot(date);
-					String sent = new String(campus+": " + cnt+"; ");
-					SendUDPDatagram(socket, sent, targetAddr, targetPort);
-				}
-				else if(parts.length==2 && parts[0].equals("GetBookingDate")) {
-					String bookingID = parts[1];
-					Record record = bookingIDMap.get(bookingID);
-					String reply;
-					if(record != null) {
-						Date date = record.getDate();
-						SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-						reply = df.format(date); 
-					}
-					else
-						reply = "";
-					SendUDPDatagram(socket, reply, targetAddr, targetPort);
-				}
-				// params: CanCancel bookingID  stu_id
-				else if(parts.length==3 && parts[0].equals("CanCancel")) {
-					String bookingID = parts[1];
-					String stu_id = parts[2];
-					Record record = bookingIDMap.get(bookingID);
-					
-					String reply;
-					if(record==null || !stu_id.equals(record.getBookerID()))
-						reply = "false";
-					else
-						reply = "true";
-							
-					SendUDPDatagram(socket, reply, targetAddr, targetPort);
-				}
-				// params: CanBook room_no date timeslot
-				else if(parts.length==4 && parts[0].equals("CanBook")) {
-					int room_no = Integer.parseInt(parts[1]);
-					Date date = null;
-					try {
-						SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-						date = df.parse(parts[2]);
-					} catch (ParseException e) {
-						e.printStackTrace();
-						continue;
-					}
-					String timeslot = parts[3];
-					
-					 boolean ret = isTimeslotAvailable(date, room_no, timeslot);
-					 SendUDPDatagram(socket, String.valueOf(ret), targetAddr, targetPort);
-				}
-				// params: DecreaseStuCounting DVL10000
-				else if(parts.length==3 && parts[0].equals("DecreaseStuCounting")) {
-					String stu_id = parts[1];
-					String s_date = parts[2];
-					Date date = null;
-					try {
-						date = dateFormat.parse(s_date);
-					} catch (ParseException e) {
-						e.printStackTrace();
-						continue;
-					}
-					
-					lock.writeLock().lock();
-					int cnt = GetStuBookingCnt(stu_id, s_date);
-					SetStuBookingCnt(stu_id, s_date, cnt-1);
-					lock.writeLock().unlock();
-				}
-				// params: CancelBook DVL123481759134 DVL10000
-				else if(parts.length==3 && parts[0].equals("CancelBook")) {
-					String bookingID = parts[1];
-					String stu_id = parts[2];
-					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-					
-					Record record = bookingIDMap.get(bookingID);
-					boolean ret = CancelBook(bookingID, stu_id);
-					String message = String.valueOf(ret);
-					
-					SendUDPDatagram(socket, message, targetAddr, targetPort);
-				}
-				//params: Book DVL10000 DVL 2017-9-18 201 7:30-9:30
-				else if(parts.length==6 && parts[0].equals("Book")) {
-					String stu_id = parts[1];
-					String targetCampus = parts[2];
-					int room = Integer.parseInt(parts[4]);
-					String timeslot = parts[5];
-					Date date = null;
-					
-					try {
-						date = dateFormat.parse(parts[3]);
-					} catch (ParseException e) {
-						e.printStackTrace();
-					}
-					
-					String bookingID = Book(stu_id, targetCampus, date, room, timeslot);
-					if(bookingID == null)
-						bookingID = new String("");
-					SendUDPDatagram(socket, bookingID, targetAddr, targetPort);
-				}
+				Thread worker = new UDPWorker(packet);
+				worker.start();
 			}
 			
 		}

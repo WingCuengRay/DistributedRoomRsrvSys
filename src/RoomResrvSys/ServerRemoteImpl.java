@@ -257,7 +257,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 			String new_campus_name, String new_room_no, String new_timeslot) {
 		// TODO Auto-generated method stub
 		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
-		LogItem log = new LogItem(RequestType.CancelBook, args);
+		LogItem log = new LogItem(RequestType.ChangeReservation, args);
 		
 		String targetIP = null;
 		int targetPort = 0;
@@ -317,6 +317,8 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 				reply = ReceiveUDPDatagram(socket);
 				throw new Exception("Cannot cancel old booking");
 			}
+			log.setResult(true);
+			log.setResponse(new_bookingID);
 			
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -328,9 +330,6 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		} finally {
 			writer.write(log);
 		}
-		
-		log.setResult(true);
-		log.setResponse(new_bookingID);
 		
 		return new_bookingID;
 	}

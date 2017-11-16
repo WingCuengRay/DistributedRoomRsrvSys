@@ -21,6 +21,7 @@ public class LogItem {
 		requestMap.put(RequestType.AddRecord, "AddRecord");
 		requestMap.put(RequestType.DeleteRecord, "DeleteRecord");
 		requestMap.put(RequestType.GetAvailTimeSlot, "GetAvailTimeSlot");
+		requestMap.put(RequestType.ChangeReservation, "ChangeReservation");
 	}
 	
 	

@@ -61,7 +61,7 @@ public class StudentClient extends Client {
 		String new_bookingID = service.ChangeReservation(user_id, bookingID, new_campus_name, new_room_no, new_timeslot);
 		
 		String[] args = {bookingID, new_campus_name, new_room_no, new_timeslot};
-		LogItem log = new LogItem(RequestType.CancelBook, args);
+		LogItem log = new LogItem(RequestType.ChangeReservation, args);
 		if(new_bookingID.equals("")) {
 			log.setResult(false);
 			log.setResponse(null);
