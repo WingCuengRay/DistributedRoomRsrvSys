@@ -53,7 +53,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public String[] AddRecord (String date, short room, String[] timeSlots){
+	public String[] createRoom (String id, String room, String date, String[] timeSlots){
 		ArrayList<String> l_res = new ArrayList<String>();
 		for(String item:timeSlots){
 			// Prepare for log istance
@@ -82,7 +82,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public boolean[] DeleteRecord (String date, short room, String[] timeSlots){
+	public boolean[] deleteRoom (String id, String room, String date, String[] timeSlots){
 		boolean[] result = new boolean[timeSlots.length];
 		
 		int i=0;
@@ -115,8 +115,8 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public String Book (String stu_id, String campus, String date, short room, String timeslot){
-		String[] args = {stu_id, date, String.valueOf(room), timeslot};
+	public String bookRoom(String stu_id, String campus, String room, String date, String timeslot){
+		String[] args = {stu_id, date, room, timeslot};
 		LogItem log = new LogItem(RequestType.Book, args);
 		
 		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id, date);
@@ -174,22 +174,22 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public boolean CancelBook (String bookingID, String stu_id){
+	public boolean cancelBook (String stu_id, String bookingID){
 		String[] args = {bookingID};
 		LogItem log = new LogItem(RequestType.CancelBook, args);
 		
 		// Initialize socket information
 		int targetPort = 0;
 		String targetIP = null;
-		if(bookingID.contains("DVL")) {
+		if(bookingID.substring(0, 3).equals("DVL")) {
 			targetPort = 25560;
 			targetIP = "127.0.0.1";
 		}
-		else if(bookingID.contains("KKL")) {
+		else if(bookingID.substring(0, 3).equals("KKL")) {
 			targetPort = 25561;
 			targetIP = "127.0.0.1";
 		}
-		else if(bookingID.contains("WST")) {
+		else if(bookingID.substring(0, 3).equals("WST")) {
 			targetPort = 25562;
 			targetIP = "127.0.0.1";
 		}
@@ -234,7 +234,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public String GetAvailTimeSlots (String date){
+	public String getAvailableTimeslot(String stu_id, String date){
 		String[] args = {date};
 		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, args);
 				
@@ -253,24 +253,23 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 	}
 	
 	@Override
-	public String ChangeReservation(String stu_id, String bookingID, 
+	public String changeReservation(String stu_id, String bookingID, 
 			String new_campus_name, String new_room_no, String new_timeslot) {
-		// TODO Auto-generated method stub
 		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
 		LogItem log = new LogItem(RequestType.ChangeReservation, args);
 		
 		String targetIP = null;
 		int targetPort = 0;
 		
-		if(bookingID.contains("DVL")) {
+		if(bookingID.substring(0, 3).equals("DVL")) {
 			targetIP = "127.0.0.1";
 			targetPort = 25560;
 		}
-		else if(bookingID.contains("KKL")) {
+		else if(bookingID.substring(0, 3).equals("KKL")) {
 			targetIP = "127.0.0.1";
 			targetPort = 25561;
 		}
-		else if(bookingID.contains("WST")) {
+		else if(bookingID.substring(0, 3).equals("WST")) {
 			targetIP = "127.0.0.1";
 			targetPort = 25562;
 		}
@@ -332,6 +331,12 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		}
 		
 		return new_bookingID;
+	}
+	
+	@Override
+	public boolean login(String id) {
+		// TODO Auto-generated method stub
+		return true;
 	}
 
 	
@@ -426,6 +431,7 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		
 		System.out.println("Helllo World");
 	}
+
 
 
 

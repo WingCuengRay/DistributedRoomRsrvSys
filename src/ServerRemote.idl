@@ -5,12 +5,13 @@ module RemoteInterface{
 
 	interface ServerRemote
 	{
-		ListOfString AddRecord(in string date, in unsigned short room, in ListOfString timeslots);
-		ListOfBool DeleteRecord(in string date, in unsigned short room, in ListOfString timeslots);
-		string Book(in string stu_id, in string campus, in string date, in unsigned short room, in string timeslots);
-		boolean CancelBook(in string booking_id, in string stu_id);
-		string GetAvailTimeSlots(in string date);
-		string ChangeReservation(in string stu_id, in string booking_id, in string new_campus_name, 
+		boolean login(in string id);
+		ListOfString createRoom(in string id, in string room, in string date, in ListOfString timeslots);
+		ListOfBool deleteRoom(in string id, in string room, in string date, in ListOfString timeslots);
+		string bookRoom(in string stu_id, in string campus, in string room, in string date, in string timeslots);
+		boolean cancelBook(in string stu_id, in string bookingID);
+		string getAvailableTimeslot(in string id, in string date);
+		string changeReservation(in string stu_id, in string old_booking_id, in string new_campus_name, 
 										in string new_room_no, in string new_timeslot);
 	};
 };

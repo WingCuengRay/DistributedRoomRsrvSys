@@ -116,11 +116,11 @@ public class Client {
 		return true;
 	}
 	
-	public ArrayList<String> AddRecord(String date, short room, ArrayList<String> timeSlots) throws RemoteException{
+	public ArrayList<String> AddRecord(String date, String room, ArrayList<String> timeSlots) throws RemoteException{
 		return null;
 	}
 	
-	public ArrayList<Boolean> DeleteRecord(String date, short room, ArrayList<String> timeSlots) throws RemoteException{
+	public ArrayList<Boolean> DeleteRecord(String date, String room, ArrayList<String> timeSlots) throws RemoteException{
 		return null;
 	}
 	
@@ -128,7 +128,7 @@ public class Client {
 		return null;
 	}
 	
-	public String Book(String campus_name, String date, short room, String timeSlot) throws RemoteException{
+	public String Book(String campus_name, String date, String room, String timeSlot) throws RemoteException{
 		return null;
 	}
 	

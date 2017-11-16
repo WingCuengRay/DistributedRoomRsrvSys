@@ -49,24 +49,24 @@ public class TestClass {
 		admin.Connect(args);
 
 		ArrayList<String> ret;	
-		ret = admin.AddRecord(date1, (short)201, new ArrayList<String>());
+		ret = admin.AddRecord(date1, "201", new ArrayList<String>());
 		System.out.println("DVLA1000 add Records: " + ret);
 		
-		ret = admin.AddRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin.AddRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		System.out.println("DVLA1000 add Records: " + ret);
 		
 		// Add Record for KKL campus
 		admin = ClientFactory.createClient("KKLA1000");
 		admin.Login("KKLA1000", "");
 		admin.Connect(args);
-		ret = admin.AddRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin.AddRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		System.out.println("KKLA1000 add Records: " + ret);
 		
 		// Add Record for WST campus
 		Client admin_2 = ClientFactory.createClient("WSTA2000");
 		admin_2.Login("WSTA2000", "");
 		admin_2.Connect(args);
-		ret = admin_2.AddRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin_2.AddRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		System.out.println("WSTA2000 add Records: " + ret);
 		System.out.print("\n\n");
 	}
@@ -78,7 +78,7 @@ public class TestClass {
 		admin.Login(id, "");
 		admin.Connect(args);
 		
-		admin.DeleteRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		admin.DeleteRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		System.out.println("Delete all record in " + campus + "\n");
 	}
 
@@ -88,7 +88,7 @@ public class TestClass {
 		student.Connect(args);
 		
 		for(int i=0; i<5; i++)
-			BookAndPrint(student, "DVL", date2, 201, timeSlots[i]);
+			BookAndPrint(student, "DVL", date2, "201", timeSlots[i]);
 	}
 	
 	public static ArrayList<String> TestBookRemoteRoom() throws MalformedURLException, RemoteException, NotBoundException {
@@ -98,7 +98,7 @@ public class TestClass {
 		
 		ArrayList<String> bookingIDs = new ArrayList<String>();
 		for(int i=0; i<5; i++) {
-			String bookingId = BookAndPrint(student, "KKL", date2, 201, timeSlots[i]);
+			String bookingId = BookAndPrint(student, "KKL", date2, "201", timeSlots[i]);
 			if(bookingId != null)
 				bookingIDs.add(bookingId);
 		}
@@ -112,7 +112,7 @@ public class TestClass {
 		student.Connect(args);
 		
 		for(int i=0; i<5; i++) {
-			BookAndPrint(student, "KKL", date2, 201, timeSlots[i]);
+			BookAndPrint(student, "KKL", date2, "201", timeSlots[i]);
 		}
 	}
 	
@@ -137,7 +137,7 @@ public class TestClass {
 		Client student = ClientFactory.createClient("DVLS1000");
 		student.Login("DVLS1000", "");
 		student.Connect(args);
-		String bookingId = BookAndPrint(student, "WST", date2, 201, timeSlots[0]);		
+		String bookingId = BookAndPrint(student, "WST", date2, "201", timeSlots[0]);		
 		
 		Client student_2 = ClientFactory.createClient("DVLS1100");
 		student_2.Login("DVLS1100", "");
@@ -158,7 +158,7 @@ public class TestClass {
 		Client student = ClientFactory.createClient("DVLS1000");
 		student.Login("DVLS1000", "");
 		student.Connect(args);
-		String bookingID = BookAndPrint(student, "WST", date2, 201, timeSlots[1]);	
+		String bookingID = BookAndPrint(student, "WST", date2, "201", timeSlots[1]);	
 		bookingID = student.ChangeReservation(bookingID, "KKL", String.valueOf(201), timeSlots[0]);
 		if(bookingID == null) {
 			System.out.println("Failed to change.");
@@ -206,26 +206,26 @@ public class TestClass {
 		Client admin = ClientFactory.createClient("DVLA1000");
 		admin.Login("DVLA1000", "");
 		admin.Connect(args);
-		ret = admin.DeleteRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin.DeleteRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		
 		admin = ClientFactory.createClient("KKLA1000");
 		admin.Login("KKLA1000", "");
 		admin.Connect(args);
-		ret = admin.DeleteRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin.DeleteRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 		
 		Client admin_2 = ClientFactory.createClient("WSTA2000");
 		admin_2.Login("WSTA2000", "");
 		admin_2.Connect(args);
-		ret = admin_2.DeleteRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+		ret = admin_2.DeleteRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 	}
 	
 	
 	
-	private static String BookAndPrint(Client student, String campus, String date, int room, String timeslot) throws RemoteException {
+	private static String BookAndPrint(Client student, String campus, String date, String room, String timeslot) throws RemoteException {
 		String response;
 		
 		System.out.println("Booking "+ date + " " + timeslot);
-		response = student.Book(campus, date, (short)room, timeslot);
+		response = student.Book(campus, room, date, timeslot);
 		if(response != null) {
 			System.out.println("Succeed to book room in " + campus);
 			System.out.println("bookingID: " + response);

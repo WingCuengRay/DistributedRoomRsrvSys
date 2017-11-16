@@ -21,7 +21,7 @@ public class RoomRecorder {
 	
 	private static int record_id;
 	private String campus;
-	private HashMap<Date, HashMap<Integer, ArrayList<Record>>> recordDateMap;
+	private HashMap<Date, HashMap<String, ArrayList<Record>>> recordDateMap;
 	private HashMap<String, Record> bookingIDMap;
 	private ArrayList<HashMap<String, Integer>> stuBkngCntMap;  	
 	private Thread thread;
@@ -34,7 +34,7 @@ public class RoomRecorder {
 	}
 	
 	public RoomRecorder(String camp, int listenPort){
-		recordDateMap = new HashMap<Date, HashMap<Integer, ArrayList<Record>>>();
+		recordDateMap = new HashMap<Date, HashMap<String, ArrayList<Record>>>();
 		bookingIDMap = new HashMap<String, Record>();
 		stuBkngCntMap = new ArrayList<HashMap<String, Integer>>(55);
 		for(int i=0; i<55; i++)
@@ -126,7 +126,7 @@ public class RoomRecorder {
 			}
 			// params: CanBook room_no date timeslot
 			else if(parts.length==4 && parts[0].equals("CanBook")) {
-				int room_no = Integer.parseInt(parts[1]);
+				String room_no = parts[1];
 				Date date = null;
 				try {
 					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -171,7 +171,7 @@ public class RoomRecorder {
 			else if(parts.length==6 && parts[0].equals("Book")) {
 				String stu_id = parts[1];
 				String targetCampus = parts[2];
-				int room = Integer.parseInt(parts[4]);
+				String room = parts[4];
 				String timeslot = parts[5];
 				Date date = null;
 				
@@ -223,7 +223,7 @@ public class RoomRecorder {
 	
 	
 	//@return: If successfully, return the random booking id. Otherwise null. 
-	public String Book(String stu_id, String targetCampus, Date date, int room, String time_slot){
+	public String Book(String stu_id, String targetCampus, Date date, String room, String time_slot){
 		String bookingID = null;
 		
 		lock.writeLock().lock();
@@ -235,7 +235,7 @@ public class RoomRecorder {
 			int randVal;
 			Random rand = new Random();
 			randVal = rand.nextInt(Integer.MAX_VALUE);
-			bookingID = new String(campus + String.valueOf(randVal));
+			bookingID = new String(campus + String.valueOf(randVal)+stu_id);
 			bookingIDMap.put(bookingID, record);
 			
 			record.SetBookerID(stu_id);
@@ -269,15 +269,15 @@ public class RoomRecorder {
 	}
 	
 	
-	public String AddRecord(Date date, int room, String timeSlot){
+	public String AddRecord(Date date, String room, String timeSlot){
 		if(isRecordExist(date, room, timeSlot) == true) {
 			return null;
 		}
 		
 		lock.writeLock().lock();
-		HashMap<Integer, ArrayList<Record>> submap = recordDateMap.get(date);
+		HashMap<String, ArrayList<Record>> submap = recordDateMap.get(date);
 		if(submap == null){
-			HashMap<Integer, ArrayList<Record>> newsubmap = new HashMap<Integer, ArrayList<Record>>();
+			HashMap<String, ArrayList<Record>> newsubmap = new HashMap<String, ArrayList<Record>>();
 			recordDateMap.put(date, newsubmap);
 			submap = newsubmap;
 		}
@@ -298,7 +298,7 @@ public class RoomRecorder {
 	
 	
 	// @return: If successfully, return the record that was deleted. Otherwise return null
-	public Record DeleteRecord(Date date, int room, String time_slot){
+	public Record DeleteRecord(Date date, String room, String time_slot){
 		if(isRecordExist(date, room, time_slot) == false)
 			return null;
 		
@@ -343,12 +343,12 @@ public class RoomRecorder {
 		int cnt = 0;
 		
 		lock.readLock().lock();
-		HashMap<Integer, ArrayList<Record>> subMap = recordDateMap.get(date);
+		HashMap<String, ArrayList<Record>> subMap = recordDateMap.get(date);
 		if(subMap == null) {
 			lock.readLock().unlock();
 			return 0;
 		}
-		for(Integer each_room:subMap.keySet()) {
+		for(String each_room:subMap.keySet()) {
 			ArrayList<Record> records = subMap.get(each_room);
 			for(Record record:records) {
 				if(record.isOccupied() == false)
@@ -406,10 +406,10 @@ public class RoomRecorder {
 		record_id++;
 	}
 	
-	private boolean isRecordExist(Date date, int room, String time_slot){
+	private boolean isRecordExist(Date date, String room, String time_slot){
 		lock.readLock().lock();
 		try {
-			HashMap<Integer, ArrayList<Record>> submap = recordDateMap.get(date);
+			HashMap<String, ArrayList<Record>> submap = recordDateMap.get(date);
 			if(submap == null)
 				return false;
 			
@@ -429,10 +429,10 @@ public class RoomRecorder {
 	}
 
 
-	private Record getRecord(Date date, int room, String time_slot){
+	private Record getRecord(Date date, String room, String time_slot){
 		lock.readLock().lock();
 		try {
-			HashMap<Integer, ArrayList<Record>> submap = recordDateMap.get(date);
+			HashMap<String, ArrayList<Record>> submap = recordDateMap.get(date);
 			if(submap == null)
 				return null;
 			
@@ -450,8 +450,8 @@ public class RoomRecorder {
 		return null;
 	}
 	
-	private boolean isTimeslotAvailable(Date date, int room_no, String timeslot) {
-		HashMap<Integer, ArrayList<Record>> roomMap = recordDateMap.get(date);
+	private boolean isTimeslotAvailable(Date date, String room_no, String timeslot) {
+		HashMap<String, ArrayList<Record>> roomMap = recordDateMap.get(date);
 		if(roomMap == null)
 			return false;
 		
@@ -484,8 +484,8 @@ public class RoomRecorder {
 	public void PrintMap(){
 		for(Date item : recordDateMap.keySet()){
 			System.out.println(item + ":");
-			HashMap<Integer, ArrayList<Record>> subMap = recordDateMap.get(item);
-			for(Integer room : subMap.keySet()){
+			HashMap<String, ArrayList<Record>> subMap = recordDateMap.get(item);
+			for(String room : subMap.keySet()){
 				System.out.println("\t" + room + ":" );
 				for(Record record : subMap.get(room)){
 					String output = "\t\tTime: " + record.getTimeSlot() + ", " + " Record_ID: " + record.getRecordID()

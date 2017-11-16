@@ -11,8 +11,8 @@ public class AdminClient extends Client {
 	}
 	
 	@Override
-	public ArrayList<String> AddRecord(String date, short room, ArrayList<String> timeSlots) throws RemoteException {
-		String[] recordID = service.AddRecord(date, room, timeSlots.toArray(new String[timeSlots.size()]));
+	public ArrayList<String> AddRecord(String date, String room, ArrayList<String> timeSlots) throws RemoteException {
+		String[] recordID = service.createRoom(user_id, room, date, timeSlots.toArray(new String[timeSlots.size()]));
 		
 		for(int i=0; i<timeSlots.size(); i++) {
 			String[] args = new String[] {date, String.valueOf(room), timeSlots.get(i)};
@@ -30,8 +30,8 @@ public class AdminClient extends Client {
 	}
 	
 	@Override
-	public ArrayList<Boolean> DeleteRecord(String date, short room, ArrayList<String> timeSlots) throws RemoteException {
-		boolean[] result = service.DeleteRecord(date, room, timeSlots.toArray(new String[timeSlots.size()]));
+	public ArrayList<Boolean> DeleteRecord(String date, String room, ArrayList<String> timeSlots) throws RemoteException {
+		boolean[] result = service.deleteRoom(user_id, room, date, timeSlots.toArray(new String[timeSlots.size()]));
 		
 		for(int i=0; i<timeSlots.size(); i++) {
 			String[] args = new String[] {date, String.valueOf(room), timeSlots.get(i)};
@@ -70,19 +70,19 @@ public class AdminClient extends Client {
 			ArrayList<String> ret;
 			
 			admin.Connect(args);
-			ret = admin.AddRecord(date1, (short) 201, new ArrayList<String>());
+			ret = admin.AddRecord(date1, "201", new ArrayList<String>());
 			System.out.println(ret);
 			
-			ret = admin.AddRecord(date3, (short)203, new ArrayList<String>());
+			ret = admin.AddRecord(date3, "203", new ArrayList<String>());
 			System.out.println(ret);
 			
-			ret = admin.AddRecord(date2, (short)201, new ArrayList<String>());
+			ret = admin.AddRecord(date2, "201", new ArrayList<String>());
 			System.out.println(ret);
 			
-			ret = admin.AddRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+			ret = admin.AddRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 			System.out.println(ret);
 			
-			ret = admin.AddRecord(date2, (short)203, new ArrayList<String>());
+			ret = admin.AddRecord(date2, "203", new ArrayList<String>());
 			System.out.println(ret);
 			
 		}catch (Exception ex){
@@ -101,7 +101,7 @@ public class AdminClient extends Client {
 			ArrayList<String> ret;
 			
 			admin.Connect(args);
-			ret = admin.AddRecord(date2, (short)201, new ArrayList<String>(Arrays.asList(timeSlots)));
+			ret = admin.AddRecord(date2, "201", new ArrayList<String>(Arrays.asList(timeSlots)));
 			System.out.println(ret);
 			
 		}catch (Exception ex){

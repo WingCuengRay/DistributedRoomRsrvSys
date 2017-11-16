@@ -7,7 +7,7 @@ public class StudentClient extends Client {
 	
 	@Override
 	public String GetAvailableTimeSlot(String date){
-		String response = service.GetAvailTimeSlots(date);
+		String response = service.getAvailableTimeslot(user_id, date);
 		
 		String[] args = new String[] {date};
 		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, args);
@@ -19,9 +19,9 @@ public class StudentClient extends Client {
 	}
 	
 	@Override
-	public String Book(String campus_name, String date, short room, String timeSlot){
+	public String Book(String campus_name, String room, String date, String timeSlot){
 		String bookingID = null;
-		bookingID = service.Book(user_id, campus_name, date, room, timeSlot);
+		bookingID = service.bookRoom(user_id, campus_name, room, date, timeSlot);
 		
 		String[] args = new String[] {user_id, date, String.valueOf(room), timeSlot};
 		LogItem log = new LogItem(RequestType.Book, args);
@@ -45,7 +45,7 @@ public class StudentClient extends Client {
 			return false;
 		}
 		
-		boolean ret = service.CancelBook(bookingID, this.user_id);
+		boolean ret = service.cancelBook(this.user_id, bookingID);
 		
 		String[] args = {bookingID};
 		LogItem log = new LogItem(RequestType.CancelBook, args);
@@ -58,7 +58,7 @@ public class StudentClient extends Client {
 	@Override
 	public String ChangeReservation(String bookingID, String new_campus_name, 
 			String new_room_no, String new_timeslot) {
-		String new_bookingID = service.ChangeReservation(user_id, bookingID, new_campus_name, new_room_no, new_timeslot);
+		String new_bookingID = service.changeReservation(user_id, bookingID, new_campus_name, new_room_no, new_timeslot);
 		
 		String[] args = {bookingID, new_campus_name, new_room_no, new_timeslot};
 		LogItem log = new LogItem(RequestType.ChangeReservation, args);
@@ -104,7 +104,7 @@ public class StudentClient extends Client {
 			
 			// Test Add/Delete Booking
 			{
-				response = student.Book("DVL", date2, (short)201, timeSlots[0]);
+				response = student.Book("DVL", "201", date2, timeSlots[0]);
 				System.out.println("bookingID:" + response);
 				isSuccess = student.CancelBook(response);
 				System.out.println("Cancel Booking Result: " + isSuccess);
@@ -119,19 +119,19 @@ public class StudentClient extends Client {
 			{
 				for(int i=0; i<2; i++)
 				{
-					String bookingID = student.Book("DVL", date2, (short)201, timeSlots[i]);
+					String bookingID = student.Book("DVL", "201", date2, timeSlots[i]);
 					availTimeSlots = student.GetAvailableTimeSlot(date2);
 					System.out.println(bookingID);
 					System.out.println(availTimeSlots);
 				}
 				
 				System.out.println("\n\n");
-				String bookingID = student.Book("KKL", date2, (short)201, timeSlots[1]);
+				String bookingID = student.Book("KKL", "201", date2, timeSlots[1]);
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID + " " + availTimeSlots);
 				
 				
-				String bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[2]);		//Should fail
+				String bookingID2 = student.Book("KKL", "201", date2, timeSlots[2]);		//Should fail
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
 					
@@ -140,7 +140,7 @@ public class StudentClient extends Client {
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(availTimeSlots + "\n\n");
 				
-				bookingID2 = student.Book("KKL", date2, (short)201, timeSlots[2]);		// Should success
+				bookingID2 = student.Book("KKL", "201", date2, timeSlots[2]);		// Should success
 				availTimeSlots = student.GetAvailableTimeSlot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
 			
