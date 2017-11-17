@@ -1,4 +1,7 @@
-package RoomResrvSys;
+package Client;
+
+import RoomResrvSys.LogItem;
+import RoomResrvSys.RequestType;
 
 public class StudentClient extends Client {
 	protected StudentClient(){

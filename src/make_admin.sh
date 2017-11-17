@@ -1,6 +1,6 @@
 #/bin/bash
 
-javac -g -cp . ./RoomResrvSys/*.java -d ../bin/
+javac -g -cp . ./Client/*.java -d ../bin/
 cd ../bin
-java RoomResrvSys.AdminClient -ORBInitialHost localhost -ORBInitialPort     1050
+java Client.AdminClient 
 cd ../src

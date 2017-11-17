@@ -1,19 +1,16 @@
-package RoomResrvSys;
+package Client;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
-import org.omg.CORBA_2_3.ORB;
-import org.omg.CosNaming.NameComponent;
-import org.omg.CosNaming.NamingContext;
-import org.omg.CosNaming.NamingContextHelper;
-
-import RemoteInterface.ServerRemote;
-import RemoteInterface.ServerRemoteHelper;
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+import RoomResrvSys.LogWriter;
+import RoomResrvSys.RemoteServerInterface;
 
 public class Client {
 	public enum Identity{
@@ -26,18 +23,18 @@ public class Client {
 	protected Identity identity;
 	protected LogWriter writer;
 	protected String campus;
-	protected ServerRemote service;
+	protected RemoteServerInterface service;
 	protected final static HashMap<Identity, String> serverMap;
 	
 	// Initialize the static variable
 	static {
 		serverMap = new HashMap<Identity, String>();
-		serverMap.put(Identity.DVLA, "ServerRemoteDVL");
-		serverMap.put(Identity.KKLA, "ServerRemoteKKL");
-		serverMap.put(Identity.WSTA, "ServerRemoteWST");
-		serverMap.put(Identity.DVLS, "ServerRemoteDVL");
-		serverMap.put(Identity.KKLS, "ServerRemoteKKL");
-		serverMap.put(Identity.WSTS, "ServerRemoteWST");
+		serverMap.put(Identity.DVLA, "http://localhost:10030/RemoteServer?wsdl");
+		serverMap.put(Identity.KKLA, "http://localhost:10031/RemoteServer?wsdl");
+		serverMap.put(Identity.WSTA, "http://localhost:10032/RemoteServer?wsdl");
+		serverMap.put(Identity.DVLS, "http://localhost:10030/RemoteServer?wsdl");
+		serverMap.put(Identity.KKLS, "http://localhost:10031/RemoteServer?wsdl");
+		serverMap.put(Identity.WSTS, "http://localhost:10032/RemoteServer?wsdl");
 	}
 	
 	
@@ -94,24 +91,14 @@ public class Client {
 	}
 	
 	protected boolean Connect(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
-		String serverName = serverMap.get(identity);
-		if(serverName == null)
+		String serverUrl = serverMap.get(identity);
+		if(serverUrl == null)
 			return false;
 	
-		// get CORBA remote object
-		ORB orb = (ORB) ORB.init(args, null);   // TODO - set args
-		try {
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContext ncRef = NamingContextHelper.narrow(objRef);
-			NameComponent nc = new NameComponent(serverName, "");
-			NameComponent path[] = {nc};
-			
-			service = ServerRemoteHelper.narrow(ncRef.resolve(path));
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
+		URL url = new URL(serverUrl);
+		QName qName = new QName("http://RoomResrvSys/", "ServerRemoteImplService");
+		Service r_service = Service.create(url, qName);
+		service = r_service.getPort(RemoteServerInterface.class);
 		
 		return true;
 	}

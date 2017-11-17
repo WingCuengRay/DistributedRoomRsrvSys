@@ -1,4 +1,4 @@
-package RoomResrvSys;
+package Client;
 
 import java.net.MalformedURLException;
 import java.rmi.NotBoundException;

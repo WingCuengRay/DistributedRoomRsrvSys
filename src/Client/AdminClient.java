@@ -1,8 +1,11 @@
-package RoomResrvSys;
+package Client;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import RoomResrvSys.LogItem;
+import RoomResrvSys.RequestType;
 
 public class AdminClient extends Client {
 	protected AdminClient(){

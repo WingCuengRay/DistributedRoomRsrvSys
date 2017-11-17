@@ -9,20 +9,14 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 
-import org.omg.CORBA_2_3.ORB;
-import org.omg.CosNaming.NameComponent;
-import org.omg.CosNaming.NamingContext;
-import org.omg.CosNaming.NamingContextHelper;
-import org.omg.PortableServer.POA;
-import RemoteInterface.ServerRemote;
-import RemoteInterface.ServerRemoteHelper;
-import RemoteInterface.ServerRemotePOA;
+import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+import javax.jws.soap.SOAPBinding.Style;
 
-public class ServerRemoteImpl extends ServerRemotePOA {
+@WebService(endpointInterface = "RoomResrvSys.RemoteServerInterface")
+public class ServerRemoteImpl implements RemoteServerInterface {
 	private RoomRecorder roomRecorder;
 	private String campus;
 	private LogWriter writer;
@@ -42,8 +36,12 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		hostPortMap.put("WST", 25562);
 	}
 	
+	public ServerRemoteImpl()
+	{
+		
+	}
 	
-	protected ServerRemoteImpl(String campus_name, int listenPort) throws SocketException {
+	public ServerRemoteImpl(String campus_name, int listenPort) throws SocketException {
 		super();
 		
 		campus = campus_name;
@@ -394,45 +392,6 @@ public class ServerRemoteImpl extends ServerRemotePOA {
 		
 		return message;
 	}
-	
-	
-	
-	public static void main(String[] args){
-		// parse parameters
-		// Format: -ORBInitialHost localhost -ORBInitialPort 1050 -campus KKL -udpPort 25560
-		String[] orbArgs = Arrays.copyOfRange(args, 0, 4);
-		String campus = args[5];
-		int port = Integer.parseInt(args[7]);
-		
-		try {
-			ORB orb = (ORB) ORB.init(orbArgs, null);
-			POA rootpoa = (POA) orb.resolve_initial_references("RootPOA");
-			rootpoa.the_POAManager().activate();
-			
-			ServerRemoteImpl serverImpl = new ServerRemoteImpl(campus, port);
-			org.omg.CORBA.Object ref = rootpoa.servant_to_reference(serverImpl);
-			ServerRemote serverInterface = ServerRemoteHelper.narrow(ref);
-			
-			// naming context
-			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			NamingContext ncRef = NamingContextHelper.narrow(objRef);
-			
-			// bind interface object in Naming context
-			NameComponent nc = new NameComponent("ServerRemote"+campus, "");
-			NameComponent path[] = {nc};
-			ncRef.rebind(path, serverInterface);
-			System.out.println("Server of" + campus + "ready and waiting...");
-			
-			orb.run();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		
-		System.out.println("Helllo World");
-	}
-
-
 
 
 }
