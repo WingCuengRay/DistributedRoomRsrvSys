@@ -11,11 +11,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.jws.WebService;
-import javax.jws.soap.SOAPBinding;
-import javax.jws.soap.SOAPBinding.Style;
+import tools.LogItem;
+import tools.LogWriter;
 
-@WebService(endpointInterface = "RoomResrvSys.RemoteServerInterface")
+
 public class ServerRemoteImpl implements RemoteServerInterface {
 	private RoomRecorder roomRecorder;
 	private String campus;
@@ -51,7 +50,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	}
 	
 	@Override
-	public String[] createRoom (String id, String room, String date, String[] timeSlots){
+	public ArrayList<String> createRoom (String id, String room, String date, ArrayList<String> timeSlots){
 		ArrayList<String> l_res = new ArrayList<String>();
 		for(String item:timeSlots){
 			// Prepare for log istance
@@ -76,12 +75,12 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 			writer.write(log);	
 		}
 	
-		return l_res.toArray(new String[l_res.size()]);
+		return l_res;
 	}
 	
 	@Override
-	public boolean[] deleteRoom (String id, String room, String date, String[] timeSlots){
-		boolean[] result = new boolean[timeSlots.length];
+	public ArrayList<Boolean> deleteRoom (String id, String room, String date, ArrayList<String> timeSlots){
+		ArrayList<Boolean> result = new ArrayList<Boolean>();
 		
 		int i=0;
 		for(String item:timeSlots){
@@ -98,11 +97,11 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 			}
 			
 			if(record != null) {
-				result[i++] = true;
+				result.add(true);
 				log.setResult(true);
 			}
 			else {
-				result[i++] = false;
+				result.add(false);
 				log.setResult(false);
 			}
 				
@@ -392,6 +391,6 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 		
 		return message;
 	}
-
+	
 
 }

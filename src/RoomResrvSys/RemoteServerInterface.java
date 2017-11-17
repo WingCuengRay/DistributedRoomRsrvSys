@@ -1,16 +1,12 @@
 package RoomResrvSys;
 
-import javax.jws.WebService;
-import javax.jws.soap.SOAPBinding;
-import javax.jws.soap.SOAPBinding.Style;
+import java.util.ArrayList;
 
-@WebService
-@SOAPBinding(style=Style.RPC)
 public interface RemoteServerInterface 
 {
   boolean login (String id);
-  String[] createRoom (String id, String room, String date, String[] timeslots);
-  boolean[] deleteRoom (String id, String room, String date, String[] timeslots);
+  ArrayList<String> createRoom (String id, String room, String date, ArrayList<String> timeslots);
+  ArrayList<Boolean> deleteRoom (String id, String room, String date, ArrayList<String> timeslots);
   String bookRoom (String stu_id, String campus, String room, String date, String timeslots);
   boolean cancelBook (String stu_id, String bookingID);
   String getAvailableTimeslot (String id, String date);

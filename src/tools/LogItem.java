@@ -1,9 +1,11 @@
-package RoomResrvSys;
+package tools;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+
+import RoomResrvSys.RequestType;
 
 public class LogItem {
 	
