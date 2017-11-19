@@ -6,11 +6,13 @@ package tools;
 import java.net.InetAddress;
 
 /**
- * @author ray
+ * @author Raymand
+ * @description The superclass for all types of message which should be sent with UDP
  *
  */
 public abstract class Message {
-	protected InetAddress srcIP;
+	// The member variables indicate where the message is sent from
+	protected InetAddress srcIP;  
 	protected int srcPort;
 	
 	public Message(){

@@ -18,6 +18,7 @@ public class ReplicaReply extends Message {
 	public ReplicaReply(String message) {
 		getValueFromString(message);
 	}
+	
 	private void getValueFromString(String message) {
 		String parts[] = message.split("\\s+");
 		if(parts.length <= 3)

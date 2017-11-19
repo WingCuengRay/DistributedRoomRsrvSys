@@ -14,12 +14,25 @@ public class UDPConnection {
 	
 	public UDPConnection() {}
 	
+	/**
+	 *  @name:   UDPConnection(String ip, int port)
+	 *  @description: Constructor that can specify the ip and port of destination
+	 *  @param:  ip - String, the ip address of destination host
+	 *			 port - int, the port of destination host		
+	 */
 	public UDPConnection(String ip, int port)
 	{
 		targetIP = ip;
 		targetPort = port;
 	}
 	
+	/**
+	 *  @name:   DatagramSocket Send(Message m)
+	 *  @description: Send a message to a host decided by the targetIP and targetPort
+	 *  @param:  m - Message, the message to be sent
+	 *  @return: DatagramSocket, the socket that used to send the message. We return this value
+	 *			 for receving reply.
+	 */
 	public DatagramSocket Send(Message m){
 		try {
 			InetAddress ipaddr = InetAddress.getByName(targetIP);
@@ -34,7 +47,13 @@ public class UDPConnection {
 		}
 	}
 	
-	
+	/**
+	 *  @name:   String ReceiveString(DatagramSocket socket)
+	 *  @description: Recevie a string message from udp. 
+	 *				  The function is always used when we need to reply later on.
+	 *  @param:  socket - DatagramSocket, the socket that we use to listen
+	 *  @return: String, the content in the udp packet
+	 */	
 	public String ReceiveString(DatagramSocket socket) {
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 		String message = null;
@@ -49,6 +68,12 @@ public class UDPConnection {
 		return message;
 	}
 	
+	/**
+	 *  @name:   DatagramPacket ReceivePacket(DatagramSocket socket)
+	 *  @description: Recevie the original udp packe
+	 *  @param:  socket - DatagramSocket, the socket that we use to listen
+	 *  @return: String, the content in the udp packet
+	 */	
 	public DatagramPacket ReceivePacket(DatagramSocket socket) {
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 		try {
