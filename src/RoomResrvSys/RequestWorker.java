@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import tools.Message;
 import tools.ReplicaReply;
+import tools.ResendRequest;
 import tools.SeqRequest;
 import tools.UDPConnection;
 
@@ -18,14 +20,18 @@ public class RequestWorker extends Thread {
 	private static PriorityQueue<SeqRequest> holdback;
 	private static String FE_Addr;
 	private static int FE_Port;
+	private static String SEQ_Addr;
+	private static int SEQ_Port;
 	
 	static {
 		ack_num = new AtomicInteger(0);
 		holdback = new PriorityQueue<SeqRequest>(50);
 		
 		//TODO
-		FE_Addr = "192.168.1.6";
-		FE_Port = 4455;
+		FE_Addr = "127.0.0.1";
+		FE_Port = 13360;
+		SEQ_Addr = "127.0.0.1";
+		SEQ_Port = 13370;
 	}
 	
 	public RequestWorker(RemoteServerInterface srv, String r_id) {
@@ -36,22 +42,28 @@ public class RequestWorker extends Thread {
 	@Override
 	public void run() {
 		while(true) {
-			SeqRequest request = holdback.peek();
+			SeqRequest request = null;
 			synchronized(holdback) {
-				if(request == null || request.getSeqNum() != ack_num.get()+1) {
-					try {
-						holdback.wait();
-					}catch(InterruptedException e) {
-						e.printStackTrace();
-					}	
+				try {
+					holdback.wait();
+				}catch(InterruptedException e) {
+					e.printStackTrace();
+				}
+				
+				request = holdback.peek();
+				if(request == null)		// No message received
+					continue;
+				else if(request.getSeqNum() > ack_num.get()+1){
+					// Missing requests exist
+					Message resendReq = new ResendRequest(ack_num.get()+1, replicaID);
+					UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
+					udpsender.Send(resendReq);
 					continue;
 				}
 				
-				// Prevent multiple threads from accessing holdback queue simultaneously
 				ack_num.incrementAndGet();
 				holdback.remove();
 			}
-			
 			
 			ArrayList<String> function = request.getFunction();
 			String name = function.get(0);
@@ -182,16 +194,21 @@ public class RequestWorker extends Thread {
 		RemoteServerInterface service = new ServerRemoteImpl(campus, innerPort);
 		Thread worker = new RequestWorker(service, replicaID);
 		worker.start();
+		System.out.println(campus + " of " + replicaID + " is running.");
 		
 		DatagramSocket socket = new DatagramSocket(outerPort);
 		while(true) {
 			UDPConnection udp = new UDPConnection();
 			DatagramPacket packet = udp.ReceivePacket(socket);
+			//System.out.println("packet received.");
 			if(packet == null)
 				continue;
 			
+			
 			SeqRequest message = new SeqRequest(packet);
 			synchronized(holdback) {
+				if(message.getSeqNum() <= ack_num.get())
+					continue;		// duplicated request
 				holdback.add(message);
 				holdback.notify();
 			}

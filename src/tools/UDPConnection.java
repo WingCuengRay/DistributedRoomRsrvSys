@@ -39,9 +39,14 @@ public class UDPConnection {
 			String s = m.pack();
 			DatagramSocket socket = new DatagramSocket();
 			DatagramPacket p = new DatagramPacket(s.getBytes(), s.length(), ipaddr, targetPort);
+			socket.send(p);
 			
 			return socket;
 		} catch (UnknownHostException | SocketException e) {
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}

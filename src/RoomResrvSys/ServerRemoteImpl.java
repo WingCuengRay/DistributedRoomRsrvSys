@@ -254,6 +254,8 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 			String new_campus_name, String new_room_no, String new_timeslot) {
 		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
 		LogItem log = new LogItem(RequestType.ChangeReservation, args);
+		if(bookingID == null || bookingID.equals("null"))
+			return null;
 		
 		String targetIP = null;
 		int targetPort = 0;

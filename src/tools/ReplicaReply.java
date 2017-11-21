@@ -21,7 +21,7 @@ public class ReplicaReply extends Message {
 	
 	private void getValueFromString(String message) {
 		String parts[] = message.split("\\s+");
-		if(parts.length <= 3)
+		if(parts.length < 3)
 			return;
 		
 		seq_num = Integer.valueOf(parts[0]);
@@ -29,7 +29,7 @@ public class ReplicaReply extends Message {
 		requestID = parts[2];
 		returnVal = "";
 		for(int i=3; i<parts.length; i++)
-			returnVal = returnVal + " " + parts[i];
+			returnVal = returnVal + parts[i] + " ";
 	}
 	
 	public ReplicaReply(int seq, String replica_id, String request_id, ArrayList<String> strs){
@@ -52,7 +52,7 @@ public class ReplicaReply extends Message {
 	public void setReply(ArrayList<String> strs) {
 		returnVal = "";
 		for(String item:strs) 
-			returnVal = returnVal + " " + item;
+			returnVal = returnVal + item + " ";
 	}
 	
 	@Override
@@ -60,6 +60,10 @@ public class ReplicaReply extends Message {
 		String ret = seq_num + " " + replicaID + " " + requestID + " " + returnVal;
 
 		return ret;
+	}
+	
+	public String getReturnVal() {
+		return returnVal;
 	}
 
 }

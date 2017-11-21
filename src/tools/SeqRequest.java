@@ -38,6 +38,8 @@ public class SeqRequest extends Message implements Comparable<SeqRequest> {
 		String []parts = message.split("\\s+");
 		seq_num = Integer.valueOf(parts[0]);
 		requestID = parts[1];
+		
+		function = new ArrayList<String>();
 		for(int i=2; i<parts.length; i++)
 			function.add(parts[i]);
 	}
@@ -59,7 +61,7 @@ public class SeqRequest extends Message implements Comparable<SeqRequest> {
 	public String pack() {
 		String ret = String.valueOf(seq_num) + " " + requestID;
 		for(int i=0; i<function.size(); i++)
-			ret = " " + function.get(i);
+			ret = ret + " " + function.get(i);
 		
 		return ret;
 	}

@@ -1,7 +1,13 @@
 package Client;
 
-import RoomResrvSys.LogItem;
+import java.net.DatagramSocket;
+
 import RoomResrvSys.RequestType;
+import tools.LogItem;
+import tools.Message;
+import tools.SeqRequest;
+import tools.UDPConnection;
+import tools.ReplicaReply;
 
 public class StudentClient extends Client {
 	protected StudentClient(){
@@ -9,8 +15,14 @@ public class StudentClient extends Client {
 	}
 	
 	@Override
-	public String GetAvailableTimeSlot(String date){
-		String response = service.getAvailableTimeslot(user_id, date);
+	public String getAvailableTimeslot(String date){
+		UDPConnection udp = new UDPConnection(ipAddr, port);
+		String message = seq_num.get(campus) + " REQ" + requestID + 
+						" getAvailableTimeslot " + user_id + " " +  date;
+		Message req = new SeqRequest(message);
+		udp.Send(req);
+		ReplicaReply reply = new ReplicaReply(udp.ReceiveString(FESocket));
+		String response = reply.getReturnVal();
 		
 		String[] args = new String[] {date};
 		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, args);
@@ -18,14 +30,22 @@ public class StudentClient extends Client {
 		log.setResponse(response);
 		writer.write(log);
 		
+		seq_num.put(campus, seq_num.get(campus)+1);
+		requestID++;
+		
 		return response;
 	}
 	
 	@Override
-	public String Book(String campus_name, String room, String date, String timeSlot){
-		String bookingID = null;
-		bookingID = service.bookRoom(user_id, campus_name, room, date, timeSlot);
-		
+	public String bookRoom(String campus_name, String room, String date, String timeSlot){
+		UDPConnection udp = new UDPConnection(ipAddr, port);
+		String message = seq_num.get(campus) + " REQ" + requestID + 
+						" bookRoom " + user_id + " " +  campus_name + " " + room + " " + date + " " + timeSlot;
+		Message req = new SeqRequest(message);
+		udp.Send(req);
+		ReplicaReply reply = new ReplicaReply(udp.ReceiveString(FESocket));
+		String bookingID = reply.getReturnVal();
+	
 		String[] args = new String[] {user_id, date, String.valueOf(room), timeSlot};
 		LogItem log = new LogItem(RequestType.Book, args);
 		
@@ -38,30 +58,51 @@ public class StudentClient extends Client {
 			log.setResult(true);
 		writer.write(log);
 		
+		seq_num.put(campus, seq_num.get(campus)+1);
+		requestID++;
+		
 		return bookingID;
 		
 	}
 	
 	@Override
-	public boolean CancelBook(String bookingID){
+	public boolean cancelBook(String bookingID){
 		if(bookingID == null) {
 			return false;
 		}
 		
-		boolean ret = service.cancelBook(this.user_id, bookingID);
+		UDPConnection udp = new UDPConnection(ipAddr, port);
+		String message = seq_num.get(campus) + " REQ" + requestID + 
+						" cancelBook " + user_id + " " +  bookingID;
+		Message req = new SeqRequest(message);
+		udp.Send(req);
+		ReplicaReply reply = new ReplicaReply(udp.ReceiveString(FESocket));
+		boolean ret = Boolean.valueOf(reply.getReturnVal());
 		
 		String[] args = {bookingID};
 		LogItem log = new LogItem(RequestType.CancelBook, args);
 		log.setResult(ret);
 		writer.write(log);
 		
+		seq_num.put(campus, seq_num.get(campus)+1);
+		requestID++;
+		
 		return ret;
 	}
 	
 	@Override
-	public String ChangeReservation(String bookingID, String new_campus_name, 
+	public String changeReservation(String bookingID, String new_campus_name, 
 			String new_room_no, String new_timeslot) {
-		String new_bookingID = service.changeReservation(user_id, bookingID, new_campus_name, new_room_no, new_timeslot);
+		UDPConnection udp = new UDPConnection(ipAddr, port);
+		String message = seq_num.get(campus) + " REQ" + requestID + 
+						" changeReservation " + user_id + " " +  bookingID + " " + new_campus_name + " " + new_room_no + " " + new_timeslot;
+		Message req = new SeqRequest(message);
+		udp.Send(req);
+		ReplicaReply reply = new ReplicaReply(udp.ReceiveString(FESocket));
+		String new_bookingID = reply.getReturnVal();
+		
+		seq_num.put(campus, seq_num.get(campus)+1);
+		requestID++;
 		
 		String[] args = {bookingID, new_campus_name, new_room_no, new_timeslot};
 		LogItem log = new LogItem(RequestType.ChangeReservation, args);
@@ -81,7 +122,7 @@ public class StudentClient extends Client {
 	
 	
 	//--------------- Debug ------------------
-	private static void testStuFunction(String []args) {
+	private static void testStuFunction() {
 		Client student = ClientFactory.createClient("DVLS1000");
 		student.Login("DVLS1000", "");
 		
@@ -93,13 +134,13 @@ public class StudentClient extends Client {
 			String response;
 			String availTimeSlots;
 			
-			student.Connect(args);
+			student.Connect();
 			
-			// Test GetAvailableTimeSlot()
+			// Test getAvailableTimeslot()
 			{
-				response = student.GetAvailableTimeSlot(date1);
+				response = student.getAvailableTimeslot(date1);
 				System.out.println(date1 + ": " +response);
-				response = student.GetAvailableTimeSlot(date2);
+				response = student.getAvailableTimeslot(date2);
 				System.out.println(date1 + ": " +response);
 			}
 			System.out.print("\n\n");
@@ -107,11 +148,11 @@ public class StudentClient extends Client {
 			
 			// Test Add/Delete Booking
 			{
-				response = student.Book("DVL", "201", date2, timeSlots[0]);
+				response = student.bookRoom("DVL", "201", date2, timeSlots[0]);
 				System.out.println("bookingID:" + response);
-				isSuccess = student.CancelBook(response);
+				isSuccess = student.cancelBook(response);
 				System.out.println("Cancel Booking Result: " + isSuccess);
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(response + " " + availTimeSlots);
 				
 			}
@@ -122,35 +163,35 @@ public class StudentClient extends Client {
 			{
 				for(int i=0; i<2; i++)
 				{
-					String bookingID = student.Book("DVL", "201", date2, timeSlots[i]);
-					availTimeSlots = student.GetAvailableTimeSlot(date2);
+					String bookingID = student.bookRoom("DVL", "201", date2, timeSlots[i]);
+					availTimeSlots = student.getAvailableTimeslot(date2);
 					System.out.println(bookingID);
 					System.out.println(availTimeSlots);
 				}
 				
 				System.out.println("\n\n");
-				String bookingID = student.Book("KKL", "201", date2, timeSlots[1]);
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				String bookingID = student.bookRoom("KKL", "201", date2, timeSlots[1]);
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(bookingID + " " + availTimeSlots);
 				
 				
-				String bookingID2 = student.Book("KKL", "201", date2, timeSlots[2]);		//Should fail
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				String bookingID2 = student.bookRoom("KKL", "201", date2, timeSlots[2]);		//Should fail
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
 					
-				boolean ret = student.CancelBook(bookingID);			// Should success
+				boolean ret = student.cancelBook(bookingID);			// Should success
 				System.out.println("Cancel booking: " + ret);
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(availTimeSlots + "\n\n");
 				
-				bookingID2 = student.Book("KKL", "201", date2, timeSlots[2]);		// Should success
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				bookingID2 = student.bookRoom("KKL", "201", date2, timeSlots[2]);		// Should success
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(bookingID2 + " " + availTimeSlots);
 			
 				// Test changeReservation
-				String new_bookingID = student.ChangeReservation(bookingID2, "KKL", String.valueOf(201), timeSlots[3]);
+				String new_bookingID = student.changeReservation(bookingID2, "KKL", String.valueOf(201), timeSlots[3]);
 				System.out.println("ChangeReservation: " + new_bookingID);
-				availTimeSlots = student.GetAvailableTimeSlot(date2);
+				availTimeSlots = student.getAvailableTimeslot(date2);
 				System.out.println(availTimeSlots + "\n\n");
 			}
 			
@@ -161,7 +202,7 @@ public class StudentClient extends Client {
 	
 	
 	public static void main(String[] args){
-		testStuFunction(args);
+		testStuFunction();
 		
 		return;
 	}
