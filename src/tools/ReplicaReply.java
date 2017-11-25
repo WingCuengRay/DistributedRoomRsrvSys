@@ -28,11 +28,14 @@ public class ReplicaReply extends Message {
 		replicaID = parts[1];
 		requestID = parts[2];
 		returnVal = "";
-		for(int i=3; i<parts.length; i++)
-			returnVal = returnVal + parts[i] + " ";
+		for(int i=3; i<parts.length; i++) {
+			returnVal = returnVal + parts[i];
+			if(i != parts.length-1)
+				returnVal += " ";
+		}
 	}
 	
-	public ReplicaReply(int seq, String replica_id, String request_id, ArrayList<String> strs){
+	public ReplicaReply(int seq, String replica_id, String request_id, ArrayList<Boolean> strs){
 		seq_num = seq;
 		replicaID = replica_id;
 		requestID = request_id;
@@ -49,10 +52,10 @@ public class ReplicaReply extends Message {
 	public void setReply(String str) {
 		returnVal = str;
 	}
-	public void setReply(ArrayList<String> strs) {
+	public void setReply(ArrayList<Boolean> strs) {
 		returnVal = "";
-		for(String item:strs) 
-			returnVal = returnVal + item + " ";
+		for(Boolean item:strs) 
+			returnVal = returnVal + item.toString() + " ";
 	}
 	
 	@Override

@@ -2,12 +2,12 @@ package Client;
 
 import java.net.DatagramSocket;
 
-import RoomResrvSys.RequestType;
 import tools.LogItem;
 import tools.Message;
 import tools.SeqRequest;
 import tools.UDPConnection;
 import tools.ReplicaReply;
+import tools.RequestType;
 
 public class StudentClient extends Client {
 	protected StudentClient(){

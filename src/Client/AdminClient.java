@@ -6,10 +6,10 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import RoomResrvSys.RequestType;
 import tools.LogItem;
 import tools.Message;
 import tools.ReplicaReply;
+import tools.RequestType;
 import tools.SeqRequest;
 import tools.UDPConnection;
 

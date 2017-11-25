@@ -13,6 +13,7 @@ import java.util.HashMap;
 
 import tools.LogItem;
 import tools.LogWriter;
+import tools.RequestType;
 
 
 public class ServerRemoteImpl implements RemoteServerInterface {
@@ -50,32 +51,38 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	}
 	
 	@Override
-	public ArrayList<String> createRoom (String id, String room, String date, ArrayList<String> timeSlots){
-		ArrayList<String> l_res = new ArrayList<String>();
+	public ArrayList<Boolean> createRoom (String id, String room, String date, ArrayList<String> timeSlots){
+		ArrayList<Boolean> ret = new ArrayList<Boolean>();
 		for(String item:timeSlots){
 			// Prepare for log istance
 			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 			String[] args = new String[]{date, String.valueOf(room), item};
 			LogItem log = new LogItem(RequestType.AddRecord, args);
 			
+			
 			String recordID = null;
+			
 			try {
 				recordID = roomRecorder.AddRecord(dateFormat.parse(date), room, item);
-				if(recordID == null) {
-					log.setResult(false);
-					recordID = "";
-				}
-				else
-					log.setResult(true);
 			} catch (ParseException e) {
 				e.printStackTrace();
+				return ret;
 			}
-			l_res.add(recordID);
+			if(recordID == null) {
+				log.setResult(false);
+				ret.add(false);
+			}
+			else{
+				log.setResult(true);
+				ret.add(true);
+			}
+
 			log.setResponse(recordID);			
 			writer.write(log);	
 		}
-	
-		return l_res;
+		
+		
+		return ret;
 	}
 	
 	@Override

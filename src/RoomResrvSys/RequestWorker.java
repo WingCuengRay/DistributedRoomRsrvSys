@@ -78,7 +78,7 @@ public class RequestWorker extends Thread {
 					ArrayList<String> timeSlots = new ArrayList<String>();
 					for(int i=4; i<function.size(); i++)
 						timeSlots.add(function.get(i));
-					ArrayList<String> ret = service.createRoom(id, room, date, timeSlots);
+					ArrayList<Boolean> ret = service.createRoom(id, room, date, timeSlots);
 					
 					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
 					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);

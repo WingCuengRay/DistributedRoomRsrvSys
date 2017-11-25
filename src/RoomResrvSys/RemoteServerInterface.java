@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public interface RemoteServerInterface 
 {
   boolean login (String id);
-  ArrayList<String> createRoom (String id, String room, String date, ArrayList<String> timeslots);
+  ArrayList<Boolean> createRoom (String id, String room, String date, ArrayList<String> timeslots);
   ArrayList<Boolean> deleteRoom (String id, String room, String date, ArrayList<String> timeslots);
   String bookRoom (String stu_id, String campus, String room, String date, String timeslots);
   boolean cancelBook (String stu_id, String bookingID);

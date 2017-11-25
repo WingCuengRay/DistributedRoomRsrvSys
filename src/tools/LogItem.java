@@ -5,8 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
-import RoomResrvSys.RequestType;
-
 public class LogItem {
 	
 	private static HashMap<RequestType, String> requestMap;
