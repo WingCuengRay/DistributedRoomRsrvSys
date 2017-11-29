@@ -1,10 +1,17 @@
 package RoomResrvSys;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,27 +24,32 @@ import tools.UDPConnection;
 public class RequestWorker extends Thread {
 	private RemoteServerInterface service;
 	private String replicaID;
+	private String campus;
+	
 	private static AtomicInteger ack_num;
 	private static PriorityQueue<SeqRequest> holdback;
-	private static String FE_Addr;
-	private static int FE_Port;
-	private static String SEQ_Addr;
-	private static int SEQ_Port;
+	
+	private static String datafile_loc = "./ser/";
+	private static final String FE_Addr;
+	private static final int FE_Port;
+	private static final String SEQ_Addr;
+	private static final int SEQ_Port;
 	
 	static {
 		ack_num = new AtomicInteger(0);
 		holdback = new PriorityQueue<SeqRequest>(50);
 		
 		//TODO
-		FE_Addr = "172.20.10.2";
+		FE_Addr = "127.0.0.1";
 		FE_Port = 13360;
 		SEQ_Addr = "127.0.0.1";
 		SEQ_Port = 13370;
 	}
 	
-	public RequestWorker(RemoteServerInterface srv, String r_id) {
-		service = srv;
-		replicaID = r_id;
+	public RequestWorker(RemoteServerInterface srv, String r_id, String campus) {
+		this.service = srv;
+		this.replicaID = r_id;
+		this.campus = campus;
 	}
 	
 	@Override
@@ -68,6 +80,7 @@ public class RequestWorker extends Thread {
 			
 			ArrayList<String> function = request.getFunction();
 			String name = function.get(0);
+			ReplicaReply message = null;
 			switch(name) {
 				case "createRoom":
 				{
@@ -81,9 +94,7 @@ public class RequestWorker extends Thread {
 						timeSlots.add(function.get(i));
 					ArrayList<Boolean> ret = service.createRoom(id, room, date, timeSlots);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
 					break;
 				}
 				case "deleteRoom":
@@ -101,9 +112,7 @@ public class RequestWorker extends Thread {
 					for(Boolean item:ret)
 						ret_str = ret_str + " " + item.toString();
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret_str);
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret_str);
 					break;
 				}
 				case "bookRoom":
@@ -117,9 +126,7 @@ public class RequestWorker extends Thread {
 					String timeslot = function.get(5);
 					String ret = service.bookRoom(id, campus, room, date, timeslot);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
 					break;
 				}
 				case "cancelBook":
@@ -130,9 +137,7 @@ public class RequestWorker extends Thread {
 					String bookingID = function.get(2);
 					Boolean ret = service.cancelBook(id, bookingID);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
 					break;
 				}
 				case "getAvailableTimeslot":
@@ -143,9 +148,7 @@ public class RequestWorker extends Thread {
 					String date = function.get(2);
 					String ret = service.getAvailableTimeslot(id, date);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
 					break;
 				}
 				case "changeReservation":
@@ -159,9 +162,7 @@ public class RequestWorker extends Thread {
 					String new_timeslot = function.get(5);
 					String ret = service.changeReservation(id, old_bookingID, new_campus_name, new_room_no, new_timeslot);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
 					break;
 				}
 				case "login":
@@ -171,15 +172,68 @@ public class RequestWorker extends Thread {
 					String id = function.get(1);
 					Boolean ret = service.login(id);
 					
-					ReplicaReply message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
-					UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
-					udp.Send(message);
+					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
 					break;
 				}
 			}
+			
+			storeData(datafile_loc+campus+".ser");
+			UDPConnection udp = new UDPConnection(FE_Addr, FE_Port);
+			udp.Send(message);
 		}
 	}
 	
+	@SuppressWarnings("resource")
+	private boolean storeData(String f_name) {
+		FileOutputStream fs;
+	
+		try {
+			fs = new FileOutputStream(datafile_loc+"RW_" + campus + ".ser");
+			ObjectOutputStream os = new ObjectOutputStream(fs);
+			
+			os.writeObject(ack_num);
+			os.writeObject(holdback);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		if(!service.storeData(f_name))
+			return false;
+			
+			return true;
+	}
+	
+	@SuppressWarnings({ "unchecked", "resource" })
+	private boolean loadData(String f_name) {
+		try {
+			FileInputStream fileStream = new FileInputStream(datafile_loc+"RW_" + campus + ".ser");
+			ObjectInputStream is = new ObjectInputStream(fileStream);
+			
+			ack_num = (AtomicInteger)is.readObject();
+			holdback = (PriorityQueue<SeqRequest>)is.readObject();
+
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		if(!service.loadData(f_name))
+			return false;
+		
+		return true; 
+	}
+	
+	/**
 	private static void setShutdownHook(String rID, int innerPort, String campus, int outwardPort) {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
@@ -198,15 +252,14 @@ public class RequestWorker extends Thread {
 			}
 		});
 	}
+	**/
 	
 	
 	public static void main(String []args) throws SocketException {
-		if(args.length != 4) {
-			System.out.println("Format: java ServerRemoteImpl Replica_1 13320 DVL 25560");
+		if(args.length != 4 && args.length != 5) {
+			System.out.println("Format: java ServerRemoteImpl Replica_1 13320 DVL 25560 <fname.ser>");
 			return;
 		}
-		
-		
 		
 		String replicaID = args[0];
 		int outerPort = Integer.valueOf(args[1]);
@@ -215,7 +268,14 @@ public class RequestWorker extends Thread {
 		
 		//setShutdownHook(replicaID, innerPort, campus, outerPort);
 		RemoteServerInterface service = new ServerRemoteImpl(campus, innerPort);
-		Thread worker = new RequestWorker(service, replicaID);
+		Thread worker = new RequestWorker(service, replicaID, campus);
+		if(args.length == 5){
+			String fname = args[4];
+			if(((RequestWorker) worker).loadData(datafile_loc+fname)) {
+				System.out.println("Error: Cannot restore data from " + fname);
+			}
+		}
+		
 		worker.start();
 		System.out.println(campus + " of " + replicaID + " is running.");
 		
@@ -223,7 +283,6 @@ public class RequestWorker extends Thread {
 		while(true) {
 			UDPConnection udp = new UDPConnection();
 			DatagramPacket packet = udp.ReceivePacket(socket);
-			//System.out.println("packet received.");
 			if(packet == null)
 				continue;
 			

@@ -1,9 +1,10 @@
 package RoomResrvSys;
 
+import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.Date;
 
-public class Record {
+public class Record implements Serializable{
 	private String timeSlot;
 	private boolean occupied;
 	private String recordId;

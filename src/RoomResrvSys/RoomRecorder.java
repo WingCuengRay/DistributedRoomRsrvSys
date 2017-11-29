@@ -5,7 +5,13 @@ import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Date;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -23,9 +29,10 @@ public class RoomRecorder {
 	private String campus;
 	private HashMap<Date, HashMap<String, ArrayList<Record>>> recordDateMap;
 	private HashMap<String, Record> bookingIDMap;
-	private ArrayList<HashMap<String, Integer>> stuBkngCntMap;  	
-	private Thread thread;
+	private ArrayList<HashMap<String, Integer>> stuBkngCntMap;
 	private int port;
+	
+	private Thread thread;
 	private ReadWriteLock lock;
 	
 	static {
@@ -402,7 +409,60 @@ public class RoomRecorder {
 	}
 
 	public boolean storeData(String f_name) {
+		FileOutputStream fs;
+		try {
+			lock.readLock().lock();
+			
+			fs = new FileOutputStream(f_name);
+			ObjectOutputStream os = new ObjectOutputStream(fs);
+			
+			os.writeInt(record_id);
+			os.writeObject(campus);
+			os.writeObject(recordDateMap);
+			os.writeObject(bookingIDMap);
+			os.writeObject(stuBkngCntMap);
+			os.writeInt(port);
+			os.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			lock.readLock().unlock();
+		}
 		
+		
+		return true;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public boolean loadData(String f_name) {
+		try {
+			lock.writeLock().lock();
+			
+			FileInputStream fileStream = new FileInputStream(f_name);
+			ObjectInputStream os = new ObjectInputStream(fileStream);
+
+			record_id = os.readInt();
+			campus = (String)os.readObject();
+			recordDateMap = (HashMap<Date, HashMap<String, ArrayList<Record>>>)os.readObject();
+			bookingIDMap = (HashMap<String, Record>)os.readObject();
+			stuBkngCntMap = (ArrayList<HashMap<String, Integer>>)os.readObject();
+			port = os.readInt();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			lock.writeLock().unlock();
+		}
 		
 		return true;
 	}

@@ -193,6 +193,7 @@ public class TestClass {
 		else {
 			System.out.println("Change successfully! New bookingID: " + ret);
 		}
+		System.out.println(student_2.getAvailableTimeslot(date2));
 		System.out.print("\n\n");
 		
 		

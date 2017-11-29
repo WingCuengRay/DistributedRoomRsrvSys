@@ -18,11 +18,13 @@ public class ReplicaManager {
 	
 	private class monitorProcess extends Thread{
 		private Replica replica;
+		private String campus;
 		private String cmd;
 		
-		monitorProcess(Replica replica, String cmd){
+		monitorProcess(Replica replica, String campus, String cmd){
 			this.replica = replica;
 			this.cmd = cmd;
+			this.campus = campus;
 		}
 		
 		@Override
@@ -32,6 +34,7 @@ public class ReplicaManager {
 				
 				if(ret != 0) {
 					// Restart replica
+					cmd = cmd + " " + campus + ".ser";
 					Process p = Runtime.getRuntime().exec(cmd);
 					replica.runningReplica = p;
 					replica.failure_cnt = 0;
@@ -110,10 +113,10 @@ public class ReplicaManager {
 			e.printStackTrace();
 			return false;
 		}
-		Replica campus = new Replica(p);
-		runningReplicas.put(campus_name, campus);
+		Replica replica = new Replica(p);
+		runningReplicas.put(campus_name, replica);
 		
-		Thread monitor = new monitorProcess(campus, cmd);
+		Thread monitor = new monitorProcess(replica, campus_name, cmd);
 		monitor.start();
 		
 		return true;

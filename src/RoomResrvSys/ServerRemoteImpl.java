@@ -347,14 +347,12 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	
 	@Override
 	public boolean storeData(String f_name) {
-		//TODO
-		return false;
+		return roomRecorder.storeData(f_name);
 	}
 	
 	@Override
 	public boolean loadData(String f_name) {
-		//TODO
-		return false;
+		return roomRecorder.loadData(f_name);
 	}
 
 	
