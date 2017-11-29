@@ -401,6 +401,11 @@ public class RoomRecorder {
 		return;
 	}
 
+	public boolean storeData(String f_name) {
+		
+		
+		return true;
+	}
 	
 	private synchronized static void IncrementRecordID(){
 		record_id++;

@@ -1,22 +1,66 @@
 package tools;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ReplicaManager {
-	private String replicaID;
-	private int failure_cnt;
-	HashMap<String, Process> runningReplicas = new HashMap<String, Process>();;
+	private class Replica{
+		Replica(Process p){
+			runningReplica = p;
+		}
+		public Process runningReplica;
+		public int last_failure_seq = -1;
+		public int failure_cnt = 0;
+	}
 	
-	static String file_path;
+	private class monitorProcess extends Thread{
+		private Replica replica;
+		private String cmd;
+		
+		monitorProcess(Replica replica, String cmd){
+			this.replica = replica;
+			this.cmd = cmd;
+		}
+		
+		@Override
+		public void run() {
+			try {
+				int ret = replica.runningReplica.waitFor();
+				
+				if(ret != 0) {
+					// Restart replica
+					Process p = Runtime.getRuntime().exec(cmd);
+					replica.runningReplica = p;
+					replica.failure_cnt = 0;
+					replica.last_failure_seq = -1;
+				}
+				
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}			
+		}
+	}
+	
+	private String replicaID;
+	private HashMap<String, Replica> runningReplicas = new HashMap<String, Replica>();
+
+	final static int RM_Port = 13355;
+	static ArrayList<String> file_paths;
 	static final HashMap<String, Integer> outwardPortMap;
 	static final HashMap<String, Integer> innerPortMap;
+
 	
 	static {
-		file_path = new String("./");
+		// TODO
+		file_paths = new ArrayList<String>();
+		file_paths.add("./");
+		file_paths.add("./");
+		file_paths.add("./");
 		
 		outwardPortMap = new HashMap<String, Integer>();
 		outwardPortMap.put("DVL", 13320);
@@ -49,37 +93,63 @@ public class ReplicaManager {
 	}
 	
 	
-	private boolean startReplica(String campus_name){
+	private boolean startReplica(String campus_name, int impl_no){
 		if(runningReplicas.get(campus_name) != null) 
 			return false;
 
-		ProcessBuilder builder = new ProcessBuilder("java", file_path, 
-									outwardPortMap.get(campus_name).toString(), campus_name, innerPortMap.get(campus_name).toString());
+		String file_path = file_paths.get(impl_no);
+		//ProcessBuilder builder = new ProcessBuilder("java", file_path, 
+		//							outwardPortMap.get(campus_name).toString(), campus_name, innerPortMap.get(campus_name).toString());
 		String cmd = "java -cp " + file_path +  " " + "RoomResrvSys.RequestWorker" + " " + replicaID + " " +
 									outwardPortMap.get(campus_name) + " " + campus_name + " " + innerPortMap.get(campus_name);		
 		
 		Process p = null;
 		try {
-			//p = builder.start();
-			final String dir = System.getProperty("user.dir");
 			p = Runtime.getRuntime().exec(cmd);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
 		}
-		runningReplicas.put(campus_name, p);
+		Replica campus = new Replica(p);
+		runningReplicas.put(campus_name, campus);
+		
+		Thread monitor = new monitorProcess(campus, cmd);
+		monitor.start();
 		
 		return true;
 	}
 	
 	private boolean stopReplica(String campus_name) {
-		Process p = runningReplicas.get(campus_name);
-		if(p == null)
+		Replica replica = runningReplicas.get(campus_name);
+		if(replica == null)
 			return true;
 		
-		p.destroy();
+		replica.runningReplica.destroy();
 		runningReplicas.remove(campus_name);
 		return true;
+	}
+	
+	
+	public void UpdateFailureCnt(String campus, int failure_seq) {
+		Replica replica = runningReplicas.get(campus);
+		if(replica == null)
+			return;
+		
+		if(failure_seq == replica.last_failure_seq+1) {
+			replica.failure_cnt++;
+		}
+		else {
+			replica.failure_cnt = 1;
+		}
+		
+		replica.last_failure_seq = failure_seq;
+	}
+	
+	public int getFailureCnt(String campus) {
+		Replica replica = runningReplicas.get(campus);
+		if(replica == null)
+			return 0;
+		return replica.failure_cnt;
 	}
 	
 	public boolean recvOpResult() {
@@ -95,12 +165,33 @@ public class ReplicaManager {
 		ReplicaManager RM = ReplicaManager.getReplicaManger();
 		RM.setReplicaID("Replica_1");
 		
-		RM.startReplica("DVL");
-		RM.startReplica("KKL");
-		RM.startReplica("WST");
+		int impl_no = 0;
+		RM.startReplica("DVL", impl_no);
+		RM.startReplica("KKL", impl_no);
+		RM.startReplica("WST", impl_no);
+		
+		UDPConnection udp = new UDPConnection();
+		DatagramSocket socket;
+		try {
+			socket = new DatagramSocket(RM_Port);
+		} catch (SocketException e) {
+			e.printStackTrace();
+			return;
+		}
 		
 		while(true) {
+			String failure = udp.ReceiveString(socket);
+			MistakeToRM failure_msg = new MistakeToRM(failure);
+			int failure_seq = failure_msg.getSeq_num();
+			String failure_campus = "DVL";			//TODO -- failure_msg.getCampus()
 			
+			RM.UpdateFailureCnt(failure_campus, failure_seq);
+			if(RM.getFailureCnt(failure_campus) == 3) {
+				// Software failure
+				impl_no = (impl_no+1)%3;
+				//Send UDP to replica to make it right;
+			}
+
 		}
 	}
 	

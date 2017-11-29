@@ -1,5 +1,6 @@
 package RoomResrvSys;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -28,7 +29,7 @@ public class RequestWorker extends Thread {
 		holdback = new PriorityQueue<SeqRequest>(50);
 		
 		//TODO
-		FE_Addr = "127.0.0.1";
+		FE_Addr = "172.20.10.2";
 		FE_Port = 13360;
 		SEQ_Addr = "127.0.0.1";
 		SEQ_Port = 13370;
@@ -179,6 +180,25 @@ public class RequestWorker extends Thread {
 		}
 	}
 	
+	private static void setShutdownHook(String rID, int innerPort, String campus, int outwardPort) {
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				System.out.println("Runtime hook!!!!");
+				String cmd = "java -cp " + "./" +  " " + "RoomResrvSys.RequestWorker" + " " + rID + " " + outwardPort
+						 + " " + campus + " " + innerPort;	
+				System.out.print(cmd);
+
+				Process p = null;
+				try {
+					p = Runtime.getRuntime().exec(cmd);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+	
 	
 	public static void main(String []args) throws SocketException {
 		if(args.length != 4) {
@@ -186,11 +206,14 @@ public class RequestWorker extends Thread {
 			return;
 		}
 		
+		
+		
 		String replicaID = args[0];
 		int outerPort = Integer.valueOf(args[1]);
 		String campus = args[2];
 		int innerPort = Integer.valueOf(args[3]);
 		
+		//setShutdownHook(replicaID, innerPort, campus, outerPort);
 		RemoteServerInterface service = new ServerRemoteImpl(campus, innerPort);
 		Thread worker = new RequestWorker(service, replicaID);
 		worker.start();

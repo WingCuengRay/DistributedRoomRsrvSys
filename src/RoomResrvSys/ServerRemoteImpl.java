@@ -341,8 +341,20 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	
 	@Override
 	public boolean login(String id) {
-		// TODO Auto-generated method stub
+		
 		return true;
+	}
+	
+	@Override
+	public boolean storeData(String f_name) {
+		//TODO
+		return false;
+	}
+	
+	@Override
+	public boolean loadData(String f_name) {
+		//TODO
+		return false;
 	}
 
 	
