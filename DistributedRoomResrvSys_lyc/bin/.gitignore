@@ -1,0 +1,14 @@
+/Client/
+/RoomResrvSys/
+/import_wsdl.sh
+/killBg.sh
+/make_admin.sh
+/make_restore_kkl.sh
+/make_restore_wst.sh
+/make_rm.sh
+/make_server.sh
+/make_stu.sh
+/make_test.sh
+/make_wsdl.sh
+/send_udp.sh
+/tools/
