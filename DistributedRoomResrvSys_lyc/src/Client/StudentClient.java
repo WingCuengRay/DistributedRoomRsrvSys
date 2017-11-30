@@ -25,7 +25,7 @@ public class StudentClient extends Client {
 		String response = reply.getReturnVal();
 		
 		String[] args = new String[] {date};
-		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, args);
+		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, user_id, args);
 		log.setResult(true);
 		log.setResponse(response);
 		writer.write(log);
@@ -47,7 +47,7 @@ public class StudentClient extends Client {
 		String bookingID = reply.getReturnVal();
 	
 		String[] args = new String[] {user_id, date, String.valueOf(room), timeSlot};
-		LogItem log = new LogItem(RequestType.Book, args);
+		LogItem log = new LogItem(RequestType.Book, user_id, args);
 		
 		log.setResponse(bookingID);
 		if(bookingID.equals("")) {
@@ -80,7 +80,7 @@ public class StudentClient extends Client {
 		boolean ret = Boolean.valueOf(reply.getReturnVal());
 		
 		String[] args = {bookingID};
-		LogItem log = new LogItem(RequestType.CancelBook, args);
+		LogItem log = new LogItem(RequestType.CancelBook, user_id, args);
 		log.setResult(ret);
 		writer.write(log);
 		
@@ -105,7 +105,7 @@ public class StudentClient extends Client {
 		requestID++;
 		
 		String[] args = {bookingID, new_campus_name, new_room_no, new_timeslot};
-		LogItem log = new LogItem(RequestType.ChangeReservation, args);
+		LogItem log = new LogItem(RequestType.ChangeReservation, user_id, args);
 		if(new_bookingID.equals("")) {
 			log.setResult(false);
 			log.setResponse(null);

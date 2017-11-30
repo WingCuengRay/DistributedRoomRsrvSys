@@ -9,6 +9,7 @@ public class LogItem {
 	
 	private static HashMap<RequestType, String> requestMap;
 	private Date time;
+	private String user_id;
 	private RequestType type;
 	private String[] args;
 	private boolean isSuccess = false;
@@ -25,8 +26,9 @@ public class LogItem {
 	}
 	
 	
-	public LogItem(RequestType t, String[] arguments) {
+	public LogItem(RequestType t, String uid, String[] arguments) {
 		time = new Date();
+		user_id = uid;
 		args = arguments;
 		type = t;
 	}
@@ -62,7 +64,7 @@ public class LogItem {
 			s_respnose = response;
 		
 		
-		return s_date+'\t'+s_type+'\t'+s_args+'\t'+s_result+"\t "+s_respnose + '\n';
+		return s_date+'\t'+ user_id + '\t' +s_type+'\t'+s_args+'\t'+s_result+"\t "+s_respnose + '\n';
 	}
 
 }

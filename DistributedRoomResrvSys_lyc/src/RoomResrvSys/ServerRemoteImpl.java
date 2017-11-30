@@ -57,7 +57,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 			// Prepare for log istance
 			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 			String[] args = new String[]{date, String.valueOf(room), item};
-			LogItem log = new LogItem(RequestType.AddRecord, args);
+			LogItem log = new LogItem(RequestType.AddRecord, id, args);
 			
 			
 			String recordID = null;
@@ -94,7 +94,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 			// Prepare for log istance
 			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 			String[] args = {date, String.valueOf(room), item};
-			LogItem log = new LogItem(RequestType.DeleteRecord, args);
+			LogItem log = new LogItem(RequestType.DeleteRecord, id, args);
 			
 			Record record = null;
 			try {
@@ -121,7 +121,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	@Override
 	public String bookRoom(String stu_id, String campus, String room, String date, String timeslot){
 		String[] args = {stu_id, date, room, timeslot};
-		LogItem log = new LogItem(RequestType.Book, args);
+		LogItem log = new LogItem(RequestType.Book, stu_id, args);
 		
 		int bookingCnt = roomRecorder.GetStuBookingCnt(stu_id, date);
 		if(bookingCnt >= 3)
@@ -180,7 +180,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	@Override
 	public boolean cancelBook (String stu_id, String bookingID){
 		String[] args = {bookingID};
-		LogItem log = new LogItem(RequestType.CancelBook, args);
+		LogItem log = new LogItem(RequestType.CancelBook, stu_id, args);
 		
 		// Initialize socket information
 		int targetPort = 0;
@@ -240,7 +240,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	@Override
 	public String getAvailableTimeslot(String stu_id, String date){
 		String[] args = {date};
-		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, args);
+		LogItem log = new LogItem(RequestType.GetAvailTimeSlot, stu_id, args);
 				
 		SendUDPDatagram("127.0.0.1", 25560, "GetAvailTimeSlot " + date);
 		SendUDPDatagram("127.0.0.1", 25561, "GetAvailTimeSlot " + date);
@@ -260,7 +260,7 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 	public String changeReservation(String stu_id, String bookingID, 
 			String new_campus_name, String new_room_no, String new_timeslot) {
 		String[] args = {stu_id, bookingID, new_campus_name, new_room_no, new_timeslot};
-		LogItem log = new LogItem(RequestType.ChangeReservation, args);
+		LogItem log = new LogItem(RequestType.ChangeReservation, stu_id, args);
 		if(bookingID == null || bookingID.equals("null"))
 			return null;
 		

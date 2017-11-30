@@ -41,7 +41,7 @@ public class AdminClient extends Client {
 		
 		for(int i=0; i<timeSlots.size(); i++) {
 			String[] args = new String[] {date, String.valueOf(room), timeSlots.get(i)};
-			LogItem log = new LogItem(RequestType.AddRecord, args);
+			LogItem log = new LogItem(RequestType.AddRecord, user_id,args);
 			
 			log.setResponse(recordID[i]);
 			if(!recordID[i].equals(""))
@@ -74,7 +74,7 @@ public class AdminClient extends Client {
 		
 		for(int i=0; i<timeSlots.size(); i++) {
 			String[] args = new String[] {date, String.valueOf(room), timeSlots.get(i)};
-			LogItem log = new LogItem(RequestType.DeleteRecord, args);
+			LogItem log = new LogItem(RequestType.DeleteRecord, user_id, args);
 			
 			if(result[i] == true) {
 				log.setResult(true);
