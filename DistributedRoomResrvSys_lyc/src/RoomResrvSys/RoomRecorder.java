@@ -415,6 +415,7 @@ public class RoomRecorder {
 			os.writeObject(bookingIDMap);
 			os.writeObject(stuBkngCntMap);
 			os.writeInt(port);
+			os.writeObject(rand);
 			os.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -443,6 +444,7 @@ public class RoomRecorder {
 			bookingIDMap = (HashMap<String, Record>) os.readObject();
 			stuBkngCntMap = (ArrayList<HashMap<String, Integer>>) os.readObject();
 			port = os.readInt();
+			rand = (Random)os.readObject();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return false;
