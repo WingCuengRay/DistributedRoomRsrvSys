@@ -165,8 +165,13 @@ public class ReplicaManager {
 	
 	
 	public static void main(String []args) {
+		if(args.length != 1)
+		{
+			System.out.println("Format: java ReplicaManager Replica_1");
+			return;
+		}
 		ReplicaManager RM = ReplicaManager.getReplicaManger();
-		RM.setReplicaID("Replica_1");
+		RM.setReplicaID(args[0]);
 		
 		int impl_no = 0;
 		RM.startReplica("DVL", impl_no);
@@ -181,7 +186,7 @@ public class ReplicaManager {
 			e.printStackTrace();
 			return;
 		}
-		
+		System.out.print(args[0] + " is running...");
 		while(true) {
 			String failure = udp.ReceiveString(socket);
 			MistakeToRM failure_msg = new MistakeToRM(failure);
