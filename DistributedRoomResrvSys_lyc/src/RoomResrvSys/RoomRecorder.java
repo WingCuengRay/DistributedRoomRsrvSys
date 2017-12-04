@@ -104,7 +104,7 @@ public class RoomRecorder {
 				}
 
 				cnt = GetAvailableTimeSlot(date);
-				String sent = new String(campus + ": " + cnt + "; ");
+				String sent = new String(campus + " " + cnt);
 				SendUDPDatagram(socket, sent, targetAddr, targetPort);
 			} else if (parts.length == 2 && parts[0].equals("GetBookingDate")) {
 				String bookingID = parts[1];

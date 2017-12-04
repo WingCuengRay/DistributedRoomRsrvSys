@@ -30,6 +30,7 @@ public class ReplicaManager {
 		@Override
 		public void run() {
 			try {
+				// while(true)		// If while loop is used, then the process can't be killed
 				int ret = replica.runningReplica.waitFor();
 				
 				if(ret != 0) {
@@ -100,11 +101,12 @@ public class ReplicaManager {
 		if(runningReplicas.get(campus_name) != null) 
 			return false;
 
-		String file_path = file_paths.get(impl_no);
 		//ProcessBuilder builder = new ProcessBuilder("java", file_path, 
 		//							outwardPortMap.get(campus_name).toString(), campus_name, innerPortMap.get(campus_name).toString());
-		String cmd = "java -cp " + file_path +  " " + "RoomResrvSys.RequestWorker" + " " + replicaID + " " +
-									outwardPortMap.get(campus_name) + " " + campus_name + " " + innerPortMap.get(campus_name);		
+		String cmd = "java -cp " + file_paths.get(impl_no) +  " " + "RoomResrvSys.RequestWorker" + " " + replicaID + " " +
+									outwardPortMap.get(campus_name) + " " + campus_name + " " + innerPortMap.get(campus_name);
+		String cmd_for_crash = "java -cp " + file_paths.get((impl_no+1)%3) +  " " + "RoomResrvSys.RequestWorker" + " " + replicaID + " " +
+				outwardPortMap.get(campus_name) + " " + campus_name + " " + innerPortMap.get(campus_name);
 		
 		Process p = null;
 		try {
@@ -116,7 +118,7 @@ public class ReplicaManager {
 		Replica replica = new Replica(p);
 		runningReplicas.put(campus_name, replica);
 		
-		Thread monitor = new monitorProcess(replica, campus_name, cmd);
+		Thread monitor = new monitorProcess(replica, campus_name, cmd_for_crash);
 		monitor.start();
 		
 		return true;
@@ -191,13 +193,13 @@ public class ReplicaManager {
 			String failure = udp.ReceiveString(socket);
 			MistakeToRM failure_msg = new MistakeToRM(failure);
 			int failure_seq = failure_msg.getSeq_num();
-			String failure_campus = "DVL";			//TODO -- failure_msg.getCampus()
+			String failure_campus = failure_msg.getCampusID();
 			
 			RM.UpdateFailureCnt(failure_campus, failure_seq);
 			if(RM.getFailureCnt(failure_campus) == 3) {
 				// Software failure
-				impl_no = (impl_no+1)%3;
-				//Send UDP to replica to make it right;
+				UDPConnection transmitter = new UDPConnection("127.0.0.1", 13325);
+				transmitter.Send(failure_msg);
 			}
 
 		}

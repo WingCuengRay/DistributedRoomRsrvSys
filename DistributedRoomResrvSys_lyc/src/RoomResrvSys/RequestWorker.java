@@ -10,12 +10,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import tools.Message;
+import tools.MistakeToRM;
 import tools.ReplicaReply;
 import tools.ResendRequest;
 import tools.SeqRequest;
@@ -25,6 +25,7 @@ public class RequestWorker extends Thread {
 	private RemoteServerInterface service;
 	private String replicaID;
 	private String campus;
+	private AtomicBoolean flag = new AtomicBoolean(true);		// Set flag to be false if we want intentional error msg
 	
 	private static AtomicInteger ack_num;
 	private static PriorityQueue<SeqRequest> holdback;
@@ -50,6 +51,31 @@ public class RequestWorker extends Thread {
 		this.service = srv;
 		this.replicaID = r_id;
 		this.campus = campus;
+		
+		Thread WrgAnswrFixer = new Thread(new Runnable() {
+			@Override
+			public void run()
+			{
+				DatagramSocket listener = null;
+				try {
+					listener = new DatagramSocket(13325);
+				} catch (SocketException e) {
+					e.printStackTrace();
+					return;
+				}
+				UDPConnection udp = new UDPConnection();
+				
+				while(true) {
+					DatagramPacket dp = udp.ReceivePacket(listener);
+					MistakeToRM msg = new MistakeToRM(dp);
+					if(msg.getStatus() == false)
+					{
+						flag.set(true);
+					}
+				}
+			}
+		});
+		WrgAnswrFixer.start();
 	}
 	
 	@Override
@@ -68,7 +94,7 @@ public class RequestWorker extends Thread {
 					continue;
 				else if(request.getSeqNum() > ack_num.get()+1){
 					// Missing requests exist
-					Message resendReq = new ResendRequest(ack_num.get()+1, replicaID);
+					Message resendReq = new ResendRequest(ack_num.get()+1, replicaID, campus);
 					UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
 					udpsender.Send(resendReq);
 					continue;
@@ -127,6 +153,8 @@ public class RequestWorker extends Thread {
 					String ret = service.bookRoom(id, campus, room, date, timeslot);
 					
 					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
+					if(flag.get() == false)
+						message.setReply("Wrong_Answe_Here");
 					break;
 				}
 				case "cancelBook":
@@ -138,6 +166,8 @@ public class RequestWorker extends Thread {
 					Boolean ret = service.cancelBook(id, bookingID);
 					
 					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
+					if(flag.get() == false)
+						message.setReply("Wrong_Answe_Here");
 					break;
 				}
 				case "getAvailableTimeslot":
@@ -149,6 +179,8 @@ public class RequestWorker extends Thread {
 					String ret = service.getAvailableTimeslot(id, date);
 					
 					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
+					if(flag.get() == false)
+						message.setReply("Wrong_Answe_Here");
 					break;
 				}
 				case "changeReservation":
@@ -163,6 +195,8 @@ public class RequestWorker extends Thread {
 					String ret = service.changeReservation(id, old_bookingID, new_campus_name, new_room_no, new_timeslot);
 					
 					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret);
+					if(flag.get() == false)
+						message.setReply("Wrong_Answe_Here");
 					break;
 				}
 				case "login":
@@ -173,6 +207,8 @@ public class RequestWorker extends Thread {
 					Boolean ret = service.login(id);
 					
 					message = new ReplicaReply(request.getSeqNum(), replicaID, request.getRequestID(), ret.toString());
+					if(flag.get() == false)
+						message.setReply("Wrong_Answe_Here");
 					break;
 				}
 			}

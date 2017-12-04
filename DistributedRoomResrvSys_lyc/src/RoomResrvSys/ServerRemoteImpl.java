@@ -247,14 +247,22 @@ public class ServerRemoteImpl implements RemoteServerInterface {
 		SendUDPDatagram("127.0.0.1", 25562, "GetAvailTimeSlot " + date);
 		String s1 = ReceiveUDPDatagram();
 		String s2 = ReceiveUDPDatagram();
-		String s3 = ReceiveUDPDatagram();		
+		String s3 = ReceiveUDPDatagram();
+		
+		ArrayList<String> ss = new ArrayList<String>() ;
+		ss.add(s1);
+		ss.add(s2);
+		ss.add(s3);
+		ss.sort(String::compareTo);
+		String ret = ss.get(0)+ " " + ss.get(1) + " " + " " + ss.get(2);
 
 		log.setResult(true);
-		log.setResponse(s1+s2+s3);
+		log.setResponse(ret);
 		writer.write(log);
 		
-		return s1+s2+s3;		
+		return ret;		
 	}
+
 	
 	@Override
 	public String changeReservation(String stu_id, String bookingID, 

@@ -1,15 +1,15 @@
 package tools;
-
 import java.net.DatagramPacket;
-import java.util.ArrayList;
 
 public class MistakeToRM extends Message {
 	
 	private int seq_num;
+	private String campusID;
 	private boolean status;
 
-	public MistakeToRM(int seq_num, boolean status) {
+	public MistakeToRM(int seq_num, String campusID, boolean status) {
 		this.seq_num = seq_num;
+		this.campusID = campusID;
 		this.status = status;
 		
 	}
@@ -29,11 +29,12 @@ public class MistakeToRM extends Message {
 	private void getValueFromString(String message) {
 		
 		String parts[] = message.split("\\s+");
-		if(parts.length < 1)
+		if(parts.length < 2)
 			return;
 		
 		seq_num = Integer.valueOf(parts[0]);
-		status = Boolean.valueOf(parts[1]);
+		campusID = parts[1];
+		status = Boolean.valueOf(parts[2]);
 	}
 	
 	@Override
@@ -44,6 +45,10 @@ public class MistakeToRM extends Message {
 	
 	public int getSeq_num() {
 		return seq_num;
+	}
+	
+	public String getCampusID() {
+		return campusID;
 	}
 	
 	public boolean getStatus() {
