@@ -1,9 +1,10 @@
 package tools;
 
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 
-public class SeqRequest extends Message implements Comparable<SeqRequest> {
+public class SeqRequest extends Message implements Comparable<SeqRequest>, Serializable {
 	private int seq_num;
 	private String requestID;
 	private ArrayList<String> function;

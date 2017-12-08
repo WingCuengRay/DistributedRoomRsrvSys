@@ -81,28 +81,33 @@ public class RequestWorker extends Thread {
 	@Override
 	public void run() {
 		while(true) {
-			SeqRequest request = null;
-			synchronized(holdback) {
+			SeqRequest request = holdback.peek();
+			if(request == null)		// No message available
+			{
+				synchronized(holdback) {
+					try {
+						holdback.wait();
+					}catch(InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				continue;
+			}
+			else if(request.getSeqNum() > ack_num.get()+1){
+				// Missing requests exist
+				Message resendReq = new ResendRequest(ack_num.get()+1, replicaID, campus);
+				UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
+				udpsender.Send(resendReq);
 				try {
-					holdback.wait();
-				}catch(InterruptedException e) {
+					sleep(100);
+				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-				
-				request = holdback.peek();
-				if(request == null)		// No message received
-					continue;
-				else if(request.getSeqNum() > ack_num.get()+1){
-					// Missing requests exist
-					Message resendReq = new ResendRequest(ack_num.get()+1, replicaID, campus);
-					UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
-					udpsender.Send(resendReq);
-					continue;
-				}
-				
-				ack_num.incrementAndGet();
-				holdback.remove();
+				continue;
 			}
+			
+			ack_num.incrementAndGet();
+			holdback.remove();
 			
 			ArrayList<String> function = request.getFunction();
 			String name = function.get(0);

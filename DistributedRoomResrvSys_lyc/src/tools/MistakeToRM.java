@@ -39,7 +39,7 @@ public class MistakeToRM extends Message {
 	
 	@Override
 	public String pack() {
-		String ret = seq_num + " " + status;
+		String ret = seq_num + " " + campusID + " " + status;
 		return ret;
 	}
 	

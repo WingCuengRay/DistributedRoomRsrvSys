@@ -53,7 +53,7 @@ public class ReplicaManager {
 	private String replicaID;
 	private HashMap<String, Replica> runningReplicas = new HashMap<String, Replica>();
 
-	final static int RM_Port = 13355;
+	final static int RM_Port = 13350;
 	static ArrayList<String> file_paths;
 	static final HashMap<String, Integer> outwardPortMap;
 	static final HashMap<String, Integer> innerPortMap;
@@ -188,7 +188,8 @@ public class ReplicaManager {
 			e.printStackTrace();
 			return;
 		}
-		System.out.print(args[0] + " is running...");
+		
+		System.out.print(args[0] + " is running now...");
 		while(true) {
 			String failure = udp.ReceiveString(socket);
 			MistakeToRM failure_msg = new MistakeToRM(failure);
@@ -198,7 +199,14 @@ public class ReplicaManager {
 			RM.UpdateFailureCnt(failure_campus, failure_seq);
 			if(RM.getFailureCnt(failure_campus) == 3) {
 				// Software failure
-				UDPConnection transmitter = new UDPConnection("127.0.0.1", 13325);
+				int port = 0;;
+				if(failure_campus.equals("DVL"))
+					port = 13325;
+				else if(failure_campus.equals("KKL"))
+					port = 13335;
+				else if(failure_campus.equals("WST"))
+					port = 13345;
+				UDPConnection transmitter = new UDPConnection("127.0.0.1", port);
 				transmitter.Send(failure_msg);
 			}
 

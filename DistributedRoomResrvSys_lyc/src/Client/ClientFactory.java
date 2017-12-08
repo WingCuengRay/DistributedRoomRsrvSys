@@ -2,7 +2,7 @@ package Client;
 
 
 public class ClientFactory {
-	static Client createClient(String user_id){
+	public static Client createClient(String user_id){
 		String identity = user_id.split("(?<=\\D)(?=\\d)")[0];
 		if(identity.length()==4 && identity.charAt(3)=='S')
 			return new StudentClient();
