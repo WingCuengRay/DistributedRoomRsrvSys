@@ -58,7 +58,14 @@ public class RequestWorker extends Thread {
 			{
 				DatagramSocket listener = null;
 				try {
-					listener = new DatagramSocket(13325);
+					int port = 13325;
+					if(campus.equals("DVL"))
+						port = 13325;
+					else if(campus.equals("KKL"))
+						port = 13335;
+					else if(campus.equals("WST"))
+						port = 13345;
+					listener = new DatagramSocket(port);
 				} catch (SocketException e) {
 					e.printStackTrace();
 					return;

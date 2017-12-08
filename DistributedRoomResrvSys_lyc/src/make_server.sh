@@ -1,5 +1,6 @@
 #/bin/bash
 
+./killBg.sh Replica
 ./killBg.sh RoomResrvSys
 javac -g -cp . ./RoomResrvSys/*.java -d ../bin/
 javac -g -cp . ./tools/*.java -d ../bin/
