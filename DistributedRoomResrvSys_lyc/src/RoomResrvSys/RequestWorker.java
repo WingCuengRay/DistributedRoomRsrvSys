@@ -41,9 +41,9 @@ public class RequestWorker extends Thread {
 		holdback = new PriorityQueue<SeqRequest>(50);
 		
 		//TODO
-		FE_Addr = "127.0.0.1";
+		FE_Addr = "192.168.0.146";
 		FE_Port = 13360;
-		SEQ_Addr = "127.0.0.1";
+		SEQ_Addr = "192.168.0.153";
 		SEQ_Port = 13370;
 	}
 	
@@ -88,33 +88,36 @@ public class RequestWorker extends Thread {
 	@Override
 	public void run() {
 		while(true) {
-			SeqRequest request = holdback.peek();
-			if(request == null)		// No message available
-			{
-				synchronized(holdback) {
+			SeqRequest request;
+			
+			synchronized(holdback) {
+				request = holdback.peek();
+				if(request == null)		// No message available
+				{
 					try {
 						holdback.wait();
 					}catch(InterruptedException e) {
 						e.printStackTrace();
 					}
+					continue;
 				}
-				continue;
-			}
-			else if(request.getSeqNum() > ack_num.get()+1){
-				// Missing requests exist
-				Message resendReq = new ResendRequest(ack_num.get()+1, replicaID, campus);
-				UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
-				udpsender.Send(resendReq);
-				try {
-					sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+				else if(request.getSeqNum() > ack_num.get()+1){
+					// Missing requests exist
+					Message resendReq = new ResendRequest(ack_num.get()+1, replicaID, campus);
+					UDPConnection udpsender = new UDPConnection(SEQ_Addr, SEQ_Port);
+					udpsender.Send(resendReq);
+					try {
+						holdback.wait();
+					}catch(InterruptedException e) {
+						e.printStackTrace();
+					}
+					continue;
 				}
-				continue;
+				else
+					request = holdback.remove();
 			}
-			
 			ack_num.incrementAndGet();
-			holdback.remove();
+			
 			
 			ArrayList<String> function = request.getFunction();
 			String name = function.get(0);
